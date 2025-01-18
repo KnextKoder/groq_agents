@@ -1,0 +1,26 @@
+{
+  "name": "groq_agents",
+  "version": "1.0.0",
+  "description": "Prebuilt task specific AI agents running solely on Groq (Not Grok)",
+  "keywords": [
+    "AI",
+    "AI-Agents",
+    "Agentic",
+    "Typescript"
+  ],
+  "homepage": "https://github.com/KnextKoder/groq_agents#readme",
+  "bugs": {
+    "url": "https://github.com/KnextKoder/groq_agents/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KnextKoder/groq_agents.git"
+  },
+  "license": "ISC",
+  "author": "Marvelous",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
