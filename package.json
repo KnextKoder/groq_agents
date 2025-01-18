@@ -1,5 +1,5 @@
 {
-  "name": "groq_agents",
+  "name": "groq-agents",
   "version": "1.0.0",
   "description": "Prebuilt task specific AI agents running solely on Groq (Not Grok)",
   "keywords": [
@@ -19,8 +19,14 @@
   "license": "ISC",
   "author": "Marvelous",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "typescript": "^4.0.0",
+    "@types/node": "^14.0.0"
   }
 }
