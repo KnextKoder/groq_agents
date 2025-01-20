@@ -1,7 +1,7 @@
 {
   "name": "groq-agents",
   "version": "1.0.0",
-  "description": "Prebuilt task specific AI agents running solely on Groq (Not Grok). Doesn't work yet",
+  "description": "Prebuilt task specific AI agents running solely on Groq (Not Grok). *In development",
   "keywords": [
     "AI",
     "AI-Agents",

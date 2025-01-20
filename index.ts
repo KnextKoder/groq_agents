@@ -60,7 +60,7 @@ export class GroqAgent implements GroqAgentType {
 const agentClient = new GroqAgent('', '')
 async () => {
     const agent = await agentClient.selectAgent("12345")
-    agent.
+    agent
 }
 
 // x.chat.completions.create()
