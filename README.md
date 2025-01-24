@@ -28,7 +28,15 @@ The `groq_agents` library provides a suite of prebuilt AI agents designed for sp
 - **Groq-Powered**: Leverage the performance and capabilities of Groq's AI models.
 - **Easy Integration**: Simple API for seamless integration into your projects.
 
-## Installation
+## Get Started
+
+To get started, install the groq-agents npm package
+
+```bash
+npm install groq-agents
+```
+
+## Installation 
 
 To install the necessary dependencies, run:
 
@@ -40,7 +48,7 @@ npm install
 
 After building the project, you can utilize the `GroqAgent` class as follows:
 
-```javascript
+```ts
 import GroqAgent from './dist/index';
 
 async function Demo() {
