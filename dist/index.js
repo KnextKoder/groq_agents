@@ -33,7 +33,6 @@ class GroqAgent {
      */
     agents() {
         const groq_client = this.GroqClient;
-        // console.log(groq_client.models)
         console.log([
             {
                 agent_name: "X Agent",
@@ -55,12 +54,23 @@ class GroqAgent {
             return agent;
         });
     }
+    call(agent) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const callingResult = yield (0, core_1.AgentCall)(agent, this.model);
+        });
+    }
 }
 exports.GroqAgent = GroqAgent;
-const agentClient = new GroqAgent('', '');
-() => __awaiter(void 0, void 0, void 0, function* () {
-    const agent = yield agentClient.selectAgent("12345");
-    agent;
+const agentClient = new GroqAgent("", 'llama-3.3-70b-versatile');
+function Fetch(id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const agent = yield agentClient.selectAgent(id);
+        const agentCall = yield agentClient.call(agent);
+    });
+}
+const x_agent = agentClient.selectAgent("");
+x_agent.then((agentbody) => {
+    return agentbody;
 });
 // x.chat.completions.create()
 exports.default = GroqAgent;

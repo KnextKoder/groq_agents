@@ -1,6 +1,6 @@
 {
   "name": "groq-agents",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Prebuilt task specific AI agents running solely on Groq (Not Grok). *In development",
   "keywords": [
     "AI",
@@ -30,6 +30,8 @@
     "typescript": "^4.0.0"
   },
   "dependencies": {
+    "@ai-sdk/groq": "^1.1.2",
+    "@ai-sdk/provider": "^1.0.6",
     "ai": "^4.1.0",
     "groq-sdk": "^0.12.0",
     "zod": "^3.24.1"

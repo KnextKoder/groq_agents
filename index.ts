@@ -1,9 +1,9 @@
 import Groq from 'groq-sdk';
-import {Agent} from './agents'
-import {FindAgent} from './core'
+import { AgentCall, FindAgent } from './core';
+import { Agent } from './agents';
 
 interface GroqAgentType {
-    model: string;
+    model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192";
 }
 
 export class GroqAgent implements GroqAgentType {
@@ -12,10 +12,9 @@ export class GroqAgent implements GroqAgentType {
     /**
      * specific groq hosted model to use, the model must support tool use
      */
-    public model: string;
+    public model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192";
 
-
-    constructor(api_key: string, model: string) {
+    constructor(api_key: string, model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192") {
         this.api_key = api_key;
         this.model = model;
         this.GroqClient = new Groq({ apiKey: api_key });
@@ -32,15 +31,14 @@ export class GroqAgent implements GroqAgentType {
      * }[]``
      */
     public agents() {
-        const groq_client = this.GroqClient
-        // console.log(groq_client.models)
+        const groq_client = this.GroqClient;
         console.log([
             {
                 agent_name: "X Agent",
                 agent_id: "101",
                 description: "Agent that interfaces with the X social media platform"
             }
-        ])
+        ]);
         // should return {agent_name: string, agent_id: string, description: string}[]
     }
 
@@ -51,17 +49,26 @@ export class GroqAgent implements GroqAgentType {
      * @returns an `Agent Type`
      */
     public async selectAgent(id: string) {
-        const agent = await FindAgent(id)
+        const agent = await FindAgent(id);
 
-        return agent
+        return agent;
+    }
+
+    public async call(agent:Agent) {
+        const callingResult = await AgentCall(agent, this.model)
     }
 }
 
-const agentClient = new GroqAgent('', '')
-async () => {
-    const agent = await agentClient.selectAgent("12345")
-    agent
+const agentClient = new GroqAgent("", 'llama-3.3-70b-versatile');
+
+async function Fetch(id: string) {
+    const agent = await agentClient.selectAgent(id);
+    const agentCall = await agentClient.call(agent)
 }
+const x_agent = agentClient.selectAgent("");
+x_agent.then((agentbody) => {
+    return agentbody;
+});
 
 // x.chat.completions.create()
 
