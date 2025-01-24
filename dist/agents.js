@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AgentSchema = exports.ActionSchema = exports.ParamsSchema = void 0;
+exports.Agent = exports.AgentSchema = exports.ActionSchema = exports.ParamsSchema = void 0;
 const zod_1 = require("zod");
 exports.ParamsSchema = zod_1.z.record(zod_1.z.any());
 const ExecutionResponseSchema = zod_1.z.object({
@@ -62,6 +62,38 @@ exports.AgentSchema = zod_1.z.object({
      */
     actions: zod_1.z.array(exports.ActionSchema)
 });
+class Agent {
+    constructor(client, system = "", agentBody, model) {
+        this.client = client;
+        this.system = system;
+        this.agentBody = agentBody;
+        this.model = model;
+        this.messages = [];
+        if (this.system) {
+            this.messages.push({ role: "system", content: this.system });
+        }
+    }
+    __call__(message) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (message) {
+                this.messages.push({ role: "user", content: message });
+            }
+            const result = yield this.execute();
+            this.messages.push({ role: "assistant", content: result || "" });
+            return result;
+        });
+    }
+    execute() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const completion = yield this.client.chat.completions.create({
+                model: this.model,
+                messages: this.messages
+            });
+            return completion.choices[0].message.content;
+        });
+    }
+}
+exports.Agent = Agent;
 // Example function that takes an Action as a parameter and executes it with provided params
 function executeAction(action, params) {
     return __awaiter(this, void 0, void 0, function* () {

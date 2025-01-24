@@ -1,20 +1,17 @@
 import Groq from 'groq-sdk';
-import { AgentCall, FindAgent } from './core';
-import { Agent } from './agents';
+import { AgentCall, AgentCallWithAnswer, FindAgent } from './core';
+import { AgentType, Agent } from './agents';
+import {GroqAgentType} from "./types"
 
-interface GroqAgentType {
-    model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192";
-}
-
-export class GroqAgent implements GroqAgentType {
-    private api_key: string;
-    private GroqClient: Groq;
+export class GroqAgent {
     /**
      * specific groq hosted model to use, the model must support tool use
      */
-    public model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192";
+    public model: GroqAgentType["model"];
+    private api_key: string;
+    private GroqClient: Groq;
 
-    constructor(api_key: string, model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192") {
+    constructor(api_key: string, model: GroqAgentType["model"]) {
         this.api_key = api_key;
         this.model = model;
         this.GroqClient = new Groq({ apiKey: api_key });
@@ -50,20 +47,33 @@ export class GroqAgent implements GroqAgentType {
      */
     public async selectAgent(id: string) {
         const agent = await FindAgent(id);
-
         return agent;
     }
 
-    public async call(agent:Agent) {
-        const callingResult = await AgentCall(agent, this.model)
+    public async call(agent: AgentType, answer: boolean) {
+        if (answer == true) {
+            const callingResult = await AgentCallWithAnswer(agent, this.model);
+        } else {
+            const callingResult = await AgentCall(agent, this.model);
+        }
+    }
+
+    /**
+     * Method to create an Agent instance and interact with it
+     * @param system Optional system message to initialize the agent
+     * @returns an instance of the Agent class
+     */
+    public createAgent(system: string = "", agentBody: AgentType):Agent {
+        return new Agent(this.GroqClient, system, agentBody, this.model);
     }
 }
 
 const agentClient = new GroqAgent("", 'llama-3.3-70b-versatile');
 
 async function Fetch(id: string) {
-    const agent = await agentClient.selectAgent(id);
-    const agentCall = await agentClient.call(agent)
+    const agentBody = await agentClient.selectAgent(id);
+    const agentCall = await agentClient.createAgent("", agentBody);
+    agentCall.__call__("Hello");
 }
 const x_agent = agentClient.selectAgent("");
 x_agent.then((agentbody) => {

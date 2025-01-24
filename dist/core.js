@@ -118,6 +118,7 @@ function AgentCallWithAnswer(agent, model) {
             prompt: "",
             maxSteps: 10
         });
+        console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`);
     });
 }
 exports.AgentCallWithAnswer = AgentCallWithAnswer;

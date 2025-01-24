@@ -1,15 +1,15 @@
-import { Agent } from "./agents";
+import { AgentType } from "./agents";
 import {tool, generateText, CoreTool} from 'ai'
 import {groq} from "@ai-sdk/groq"
 import { z } from "zod";
 
-export async function FindAgent(id:string):Promise<Agent> {
+export async function FindAgent(id:string):Promise<AgentType> {
     
     // const response = await fetch(`https://...api.com/find_agent?id=${id}`)
     // const data:Agent = await response.json()
 
     // Dummy Implementation
-    const agent: Agent = {
+    const agent: AgentType = {
         id: "1234567890",
         name: "X-Agent",
         agentDescription: "Agent for Interfacing with the X social media platform",
@@ -57,7 +57,7 @@ export async function FindAgent(id:string):Promise<Agent> {
 }
 
 
-export async function AgentCall(agent: Agent, model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192") {
+export async function AgentCall(agent: AgentType, model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192") {
     const actionNames = agent.actions.map(action => action.actionName).join(", ");
     const tools: Record<string, CoreTool> = {};
 
@@ -77,10 +77,11 @@ export async function AgentCall(agent: Agent, model: "llama-3.3-70b-versatile" |
         prompt: "",
         maxSteps: 10
     });
+
 }
 
 
-export async function AgentCallWithAnswer(agent: Agent, model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192") {
+export async function AgentCallWithAnswer(agent: AgentType, model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192") {
     const actionNames = agent.actions.map(action => action.actionName).join(", ");
     const tools: Record<string, CoreTool> = {};
 
@@ -111,4 +112,6 @@ export async function AgentCallWithAnswer(agent: Agent, model: "llama-3.3-70b-ve
         prompt: "",
         maxSteps: 10
     });
+
+    console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`)
 }

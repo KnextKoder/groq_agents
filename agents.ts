@@ -1,4 +1,6 @@
+import Groq from "groq-sdk";
 import { z } from "zod";
+import { GroqAgentType, RoleType, MessageType } from "./types";
 
 
 
@@ -66,7 +68,45 @@ export const AgentSchema = z.object({
 });
 
 export type Action = z.infer<typeof ActionSchema>;
-export type Agent = z.infer<typeof AgentSchema>;
+export type AgentType = z.infer<typeof AgentSchema>;
+
+export class Agent {
+
+    public system: string
+    private client: Groq
+    private agentBody: AgentType;
+    public model: GroqAgentType["model"]
+
+    constructor(client: any, system: string = "", agentBody: AgentType, model: GroqAgentType["model"]) {
+        this.client = client;
+        this.system = system;
+        this.agentBody = agentBody;
+        this.model = model;
+        this.messages = [];
+        if (this.system) {
+            this.messages.push({ role: "system", content: this.system });
+        }
+    }
+
+    messages: MessageType[]
+
+    async __call__(message: string) {
+        if (message) {
+            this.messages.push({ role: "user", content: message });
+        }
+        const result = await this.execute();
+        this.messages.push({ role: "assistant", content: result||"" });
+        return result;
+    }
+
+    async execute() {
+        const completion = await this.client.chat.completions.create({
+            model: this.model,
+            messages: this.messages
+        });
+        return completion.choices[0].message.content;
+    }
+}
 
 // Example function that takes an Action as a parameter and executes it with provided params
 async function executeAction(action: Action, params: z.infer<typeof ParamsSchema>) {
@@ -76,7 +116,7 @@ async function executeAction(action: Action, params: z.infer<typeof ParamsSchema
 }
 
 // Example usage
-const agent: Agent = {
+const agent: AgentType = {
     id: "1234567890",
     name: "X-Agent",
     agentDescription: "Agent for Interfacing with the X social media platform",

@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GroqAgent = void 0;
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const core_1 = require("./core");
+const agents_1 = require("./agents");
 class GroqAgent {
     constructor(api_key, model) {
         this.api_key = api_key;
@@ -54,18 +55,32 @@ class GroqAgent {
             return agent;
         });
     }
-    call(agent) {
+    call(agent, answer) {
         return __awaiter(this, void 0, void 0, function* () {
-            const callingResult = yield (0, core_1.AgentCall)(agent, this.model);
+            if (answer == true) {
+                const callingResult = yield (0, core_1.AgentCallWithAnswer)(agent, this.model);
+            }
+            else {
+                const callingResult = yield (0, core_1.AgentCall)(agent, this.model);
+            }
         });
+    }
+    /**
+     * Method to create an Agent instance and interact with it
+     * @param system Optional system message to initialize the agent
+     * @returns an instance of the Agent class
+     */
+    createAgent(system = "", agentBody) {
+        return new agents_1.Agent(this.GroqClient, system, agentBody, this.model);
     }
 }
 exports.GroqAgent = GroqAgent;
 const agentClient = new GroqAgent("", 'llama-3.3-70b-versatile');
 function Fetch(id) {
     return __awaiter(this, void 0, void 0, function* () {
-        const agent = yield agentClient.selectAgent(id);
-        const agentCall = yield agentClient.call(agent);
+        const agentBody = yield agentClient.selectAgent(id);
+        const agentCall = yield agentClient.createAgent("", agentBody);
+        agentCall.__call__("Hello");
     });
 }
 const x_agent = agentClient.selectAgent("");
