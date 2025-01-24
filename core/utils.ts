@@ -2,8 +2,21 @@ import { AgentType } from "./agents";
 import {tool, generateText, CoreTool} from 'ai'
 import {groq} from "@ai-sdk/groq"
 import { z } from "zod";
+import { ToolUseModels } from "./types";
 
-export async function FindAgent(id:string):Promise<AgentType> {
+
+const DefaultSystemPrompt = `
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+`
+
+const DefaultAgentBody: AgentType = {
+    id: "00000000000000000000",
+    name: "Orchestrator Agent",
+    description: "Agent for orchestrating other agents",
+    actions: []
+}
+
+async function FindAgent(id:string):Promise<AgentType> {
     
     // const response = await fetch(`https://...api.com/find_agent?id=${id}`)
     // const data:Agent = await response.json()
@@ -12,10 +25,10 @@ export async function FindAgent(id:string):Promise<AgentType> {
     const agent: AgentType = {
         id: "1234567890",
         name: "X-Agent",
-        agentDescription: "Agent for Interfacing with the X social media platform",
+        description: "Agent for Interfacing with the X social media platform",
         actions: [
             {
-                actionName: "create_post",
+                name: "create_post",
                 type: "Execution",
                 description: "Creates a post on the X social media platform",
                 params: {
@@ -37,7 +50,7 @@ export async function FindAgent(id:string):Promise<AgentType> {
                 }
             },
             {
-                actionName: "fetch_data",
+                name: "fetch_data",
                 type: "Retrieval",
                 description: "Fetches data from the X social media platform",
                 params: {
@@ -57,13 +70,13 @@ export async function FindAgent(id:string):Promise<AgentType> {
 }
 
 
-export async function AgentCall(agent: AgentType, model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192") {
-    const actionNames = agent.actions.map(action => action.actionName).join(", ");
+async function AgentCall(agent: AgentType, model: ToolUseModels) {
+    const actionNames = agent.actions.map(action => action.name).join(", ");
     const tools: Record<string, CoreTool> = {};
 
     agent.actions.forEach(action => {
         const paramsSchema = z.object(action.params ?? {});
-        tools[action.actionName] = tool({
+        tools[action.name] = tool({
             description: action.description,
             parameters: paramsSchema,
             execute: async (paramsSchema) => {return action.function(paramsSchema)},
@@ -73,7 +86,7 @@ export async function AgentCall(agent: AgentType, model: "llama-3.3-70b-versatil
     const { toolCalls } = await generateText({
         model: groq(model),
         tools,
-        system: `You are ${agent.name}. Your primary function is ${agent.agentDescription}. You can perform the following actions: ${actionNames}.`,
+        system: `You are ${agent.name}. Your primary function is ${agent.description}. You can perform the following actions: ${actionNames}.`,
         prompt: "",
         maxSteps: 10
     });
@@ -81,13 +94,13 @@ export async function AgentCall(agent: AgentType, model: "llama-3.3-70b-versatil
 }
 
 
-export async function AgentCallWithAnswer(agent: AgentType, model: "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-70b-8192" | "llama3-8b-8192") {
-    const actionNames = agent.actions.map(action => action.actionName).join(", ");
+async function AgentCallWithAnswer(agent: AgentType, model: ToolUseModels) {
+    const actionNames = agent.actions.map(action => action.name).join(", ");
     const tools: Record<string, CoreTool> = {};
 
     agent.actions.forEach(action => {
         const paramsSchema = z.object(action.params ?? {});
-        tools[action.actionName] = tool({
+        tools[action.name] = tool({
             description: action.description,
             parameters: paramsSchema,
             execute: async (paramsSchema) => {return action.function(paramsSchema)},
@@ -108,10 +121,13 @@ export async function AgentCallWithAnswer(agent: AgentType, model: "llama-3.3-70
     const { toolCalls } = await generateText({
         model: groq(model),
         tools,
-        system: `You are ${agent.name}. Your primary function is ${agent.agentDescription}. You can perform the following actions: ${actionNames}.`,
+        system: `You are ${agent.name}. Your primary function is ${agent.description}. You can perform the following actions: ${actionNames}.`,
         prompt: "",
         maxSteps: 10
     });
 
     console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`)
 }
+
+
+export {FindAgent, AgentCall, AgentCallWithAnswer, DefaultAgentBody, DefaultSystemPrompt}

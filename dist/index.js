@@ -14,8 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GroqAgent = void 0;
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
-const core_1 = require("./core");
-const agents_1 = require("./agents");
+const utils_1 = require("./core/utils");
+const agents_1 = require("./core/agents");
 class GroqAgent {
     constructor(api_key, model) {
         this.api_key = api_key;
@@ -26,11 +26,11 @@ class GroqAgent {
      * This method lists all the available agents and their agent id. Select a specific agent by calling the `agent` method and with the agent's id as a parameter
      *
      * @returns an array of agents data
-     * ``{
-     * agent_name: string,
+     * @example `{
+     *   agent_name: string,
      * agent_id: string,
      * description: string
-     * }[]``
+     * }[]`
      */
     agents() {
         const groq_client = this.GroqClient;
@@ -51,45 +51,45 @@ class GroqAgent {
      */
     selectAgent(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const agent = yield (0, core_1.FindAgent)(id);
+            const agent = yield (0, utils_1.FindAgent)(id);
             return agent;
         });
     }
     call(agent, answer) {
         return __awaiter(this, void 0, void 0, function* () {
             if (answer == true) {
-                const callingResult = yield (0, core_1.AgentCallWithAnswer)(agent, this.model);
+                const callingResult = yield (0, utils_1.AgentCallWithAnswer)(agent, this.model);
             }
             else {
-                const callingResult = yield (0, core_1.AgentCall)(agent, this.model);
+                const callingResult = yield (0, utils_1.AgentCall)(agent, this.model);
             }
         });
     }
     /**
+     * @returns an array of tool calling models that are available to power any agent
+     */
+    models() {
+        return ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-70b-8192", "llama3-8b-8192"];
+    }
+    /**
      * Method to create an Agent instance and interact with it
      * @param system Optional system message to initialize the agent
+     * @param agentBody Optional, the raw code that defines an agent. Of type `AgentType`
+     * @param task String that defines the task the agent is to accomplish
      * @returns an instance of the Agent class
      */
-    createAgent(system = "", agentBody) {
-        return new agents_1.Agent(this.GroqClient, system, agentBody, this.model);
+    create(task, system, agentBody) {
+        return new agents_1.Agent(system, agentBody, this.model, task);
     }
 }
 exports.GroqAgent = GroqAgent;
-const agentClient = new GroqAgent("", 'llama-3.3-70b-versatile');
-function Fetch(id) {
+function Demo() {
     return __awaiter(this, void 0, void 0, function* () {
-        const agentBody = yield agentClient.selectAgent(id);
-        const agentCall = yield agentClient.createAgent("", agentBody);
-        agentCall.__call__("Hello");
+        const client = new GroqAgent("api_key", 'llama3-70b-8192');
+        console.log(client.models()); // logs all available models
+        client.agents(); // logs all available agents +> should log all available agent
+        const agent = client.create("Write a poem", "You are a poet");
+        agent.messages[-1].content; // logs the last message content
     });
 }
-const x_agent = agentClient.selectAgent("");
-x_agent.then((agentbody) => {
-    return agentbody;
-});
-// x.chat.completions.create()
 exports.default = GroqAgent;
-// const GA = new GroqAgent("", ""),
-// const twitter_agent = GA.agents("Agent ID")
-// twitter_agent.post(data)
-// twitter_agent.like(data)
