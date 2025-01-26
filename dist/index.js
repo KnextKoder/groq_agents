@@ -81,6 +81,7 @@ class GroqAgent {
     create(task, system, agentBody) {
         return new agents_1.Agent(system, agentBody, this.model, task);
     }
+    installDependencies(dependencies) { }
 }
 exports.GroqAgent = GroqAgent;
 function Demo() {

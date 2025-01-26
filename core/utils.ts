@@ -1,26 +1,58 @@
 import { AgentType } from "./agents";
-import {tool, generateText, CoreTool} from 'ai'
-import {groq} from "@ai-sdk/groq"
+import { tool, generateText, CoreTool } from 'ai';
+import { groq } from "@ai-sdk/groq";
 import { z } from "zod";
-import { ToolUseModels } from "./types";
-
+import { CommandResult, DependencyTypeSchema, ToolUseModels } from "./types";
+import { DependencyType } from "../core/types";
+import { exec } from "child_process";
 
 const DefaultSystemPrompt = `
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-`
+You are an AI agent designed to assist with various tasks. Your primary function is to orchestrate other agents to achieve predefined tasks efficiently. You have access to the following actions: useTerminal.
+`;
 
 const DefaultAgentBody: AgentType = {
     id: "00000000000000000000",
     name: "Orchestrator Agent",
-    description: "Agent for orchestrating other agents",
-    actions: []
+    description: "Agent for orchestrating other agents in the aim to achieve a predefined task",
+    actions: [
+        {
+            name: "useTerminal",
+            description: "Execute commands on the terminal. Restricted to installation on NPM packages",
+            type: "Execution",
+            params: z.array(DependencyTypeSchema),
+            function: async (params: Record<string, any>) => {
+                const dependencies: DependencyType[] = params as DependencyType[];
+                const command = `npm install ${dependencies.map(dep => `${dep.package}@${dep.version}`).join(" ")}`;
+                const result = await executeCommand(command);
+                return {
+                    status: result.stderr ? "500" : "200",
+                    message: result.stderr || result.stdout
+                };
+            }
+        }
+    ]
+};
+
+async function executeCommand(command: string): Promise<CommandResult> {
+    return new Promise((resolve, reject) => {
+        const allowedCommands = [`bun install`, `npm install`];
+
+        if (!allowedCommands.some(allowedCommand => command.startsWith(allowedCommand))) {
+            return reject(new Error("Command not allowed. Only `bun install` or `npm install` are permitted."));
+        }
+
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                resolve({ stdout: "", stderr: error.message });
+                return;
+            }
+
+            resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+        });
+    });
 }
 
-async function FindAgent(id:string):Promise<AgentType> {
-    
-    // const response = await fetch(`https://...api.com/find_agent?id=${id}`)
-    // const data:Agent = await response.json()
-
+async function FindAgent(id: string): Promise<AgentType> {
     // Dummy Implementation
     const agent: AgentType = {
         id: "1234567890",
@@ -66,9 +98,8 @@ async function FindAgent(id:string):Promise<AgentType> {
         ]
     };
 
-    return agent
+    return agent;
 }
-
 
 async function AgentCall(agent: AgentType, model: ToolUseModels) {
     const actionNames = agent.actions.map(action => action.name).join(", ");
@@ -79,7 +110,7 @@ async function AgentCall(agent: AgentType, model: ToolUseModels) {
         tools[action.name] = tool({
             description: action.description,
             parameters: paramsSchema,
-            execute: async (paramsSchema) => {return action.function(paramsSchema)},
+            execute: async (paramsSchema) => { return action.function(paramsSchema); },
         });
     });
 
@@ -90,9 +121,7 @@ async function AgentCall(agent: AgentType, model: ToolUseModels) {
         prompt: "",
         maxSteps: 10
     });
-
 }
-
 
 async function AgentCallWithAnswer(agent: AgentType, model: ToolUseModels) {
     const actionNames = agent.actions.map(action => action.name).join(", ");
@@ -103,7 +132,7 @@ async function AgentCallWithAnswer(agent: AgentType, model: ToolUseModels) {
         tools[action.name] = tool({
             description: action.description,
             parameters: paramsSchema,
-            execute: async (paramsSchema) => {return action.function(paramsSchema)},
+            execute: async (paramsSchema) => { return action.function(paramsSchema); },
         });
     });
 
@@ -116,7 +145,7 @@ async function AgentCallWithAnswer(agent: AgentType, model: ToolUseModels) {
             })),
             answer: z.string()
         })
-    })
+    });
 
     const { toolCalls } = await generateText({
         model: groq(model),
@@ -126,8 +155,7 @@ async function AgentCallWithAnswer(agent: AgentType, model: ToolUseModels) {
         maxSteps: 10
     });
 
-    console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`)
+    console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`);
 }
 
-
-export {FindAgent, AgentCall, AgentCallWithAnswer, DefaultAgentBody, DefaultSystemPrompt}
+export { FindAgent, AgentCall, AgentCallWithAnswer, DefaultAgentBody, DefaultSystemPrompt };

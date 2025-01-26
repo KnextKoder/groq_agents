@@ -21,7 +21,11 @@ const ExecutionResponseSchema = zod_1.z.object({
 });
 const RetrievalResponseSchema = zod_1.z.object({
     status: zod_1.z.enum(["200", "400", "500"]),
-    responseBody: zod_1.z.any().optional()
+    responseBody: zod_1.z.any()
+});
+const CustomResponseSchema = zod_1.z.object({
+    status: zod_1.z.enum(["200", "400", "500"]),
+    other: zod_1.z.any().optional()
 });
 exports.ActionSchema = zod_1.z.object({
     /**
@@ -32,7 +36,7 @@ exports.ActionSchema = zod_1.z.object({
      * Types of action, where `Execution Types` return a predefined response with the status of their action
      * and `Retrieval Types` return a response object with the status and the response body
      */
-    type: zod_1.z.enum(["Execution", "Retrieval"]),
+    type: zod_1.z.enum(["Execution", "Retrieval", "Custom"]),
     /**
      * Defines the action
      */
@@ -45,7 +49,7 @@ exports.ActionSchema = zod_1.z.object({
      * Function to execute the action,
      * @returns `type of ExecutionResponseSchema` or `RetrievalResponseSchema`
      */
-    function: zod_1.z.function().args(exports.ParamsSchema).returns(zod_1.z.promise(zod_1.z.union([ExecutionResponseSchema, RetrievalResponseSchema])))
+    function: zod_1.z.function().args(exports.ParamsSchema).returns(zod_1.z.promise(zod_1.z.union([ExecutionResponseSchema, RetrievalResponseSchema, CustomResponseSchema])))
 });
 exports.AgentSchema = zod_1.z.object({
     /**
@@ -61,6 +65,10 @@ exports.AgentSchema = zod_1.z.object({
      */
     description: zod_1.z.string(),
     /**
+     * A list of dependencies for packages that and agent requires to work
+     */
+    dependency: zod_1.z.array(zod_1.z.object({ package: zod_1.z.string(), version: zod_1.z.string() })).optional(),
+    /**
      * Array of actions (tools) that the agent can interface with
      */
     actions: zod_1.z.array(exports.ActionSchema)
@@ -75,18 +83,10 @@ class Agent {
         if (this.system) {
             this.messages.push({ role: "system", content: this.system });
         }
-        // Return a Proxy to make the instance callable
-        return new Proxy(this, {
-            apply: (target, thisArg, args) => __awaiter(this, void 0, void 0, function* () {
-                return yield target.call(args[0]); // Forward call to the `call` method
-            }),
-        });
     }
-    call(task = "") {
+    work() {
         return __awaiter(this, void 0, void 0, function* () {
-            if (task) {
-                this.messages.push({ role: "user", content: task });
-            }
+            this.messages.push({ role: "user", content: `Execute this task: [${this.task}]` });
             const result = yield this.execute();
             this.messages.push({ role: "assistant", content: result || "" });
             return result;

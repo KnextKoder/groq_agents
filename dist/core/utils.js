@@ -13,21 +13,54 @@ exports.DefaultSystemPrompt = exports.DefaultAgentBody = exports.AgentCallWithAn
 const ai_1 = require("ai");
 const groq_1 = require("@ai-sdk/groq");
 const zod_1 = require("zod");
+const types_1 = require("./types");
+const child_process_1 = require("child_process");
 const DefaultSystemPrompt = `
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+You are an AI agent designed to assist with various tasks. Your primary function is to orchestrate other agents to achieve predefined tasks efficiently. You have access to the following actions: useTerminal.
 `;
 exports.DefaultSystemPrompt = DefaultSystemPrompt;
 const DefaultAgentBody = {
     id: "00000000000000000000",
     name: "Orchestrator Agent",
-    description: "Agent for orchestrating other agents",
-    actions: []
+    description: "Agent for orchestrating other agents in the aim to achieve a predefined task",
+    actions: [
+        {
+            name: "useTerminal",
+            description: "Execute commands on the terminal. Restricted to installation on NPM packages",
+            type: "Execution",
+            params: zod_1.z.array(types_1.DependencyTypeSchema),
+            function: (params) => __awaiter(void 0, void 0, void 0, function* () {
+                const dependencies = params;
+                const command = `npm install ${dependencies.map(dep => `${dep.package}@${dep.version}`).join(" ")}`;
+                const result = yield executeCommand(command);
+                return {
+                    status: result.stderr ? "500" : "200",
+                    message: result.stderr || result.stdout
+                };
+            })
+        }
+    ]
 };
 exports.DefaultAgentBody = DefaultAgentBody;
+function executeCommand(command) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            const allowedCommands = [`bun install`, `npm install`];
+            if (!allowedCommands.some(allowedCommand => command.startsWith(allowedCommand))) {
+                return reject(new Error("Command not allowed. Only `bun install` or `npm install` are permitted."));
+            }
+            (0, child_process_1.exec)(command, (error, stdout, stderr) => {
+                if (error) {
+                    resolve({ stdout: "", stderr: error.message });
+                    return;
+                }
+                resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+            });
+        });
+    });
+}
 function FindAgent(id) {
     return __awaiter(this, void 0, void 0, function* () {
-        // const response = await fetch(`https://...api.com/find_agent?id=${id}`)
-        // const data:Agent = await response.json()
         // Dummy Implementation
         const agent = {
             id: "1234567890",

@@ -6,16 +6,19 @@ import { DefaultAgentBody, DefaultSystemPrompt } from "./utils";
 
 
 
-export const ParamsSchema = z.record(z.any());
+export const ParamsSchema = z.record(z.any())
 const ExecutionResponseSchema = z.object({
     status: z.enum(["200", "400", "500"]),
     message: z.string().optional()
 });
 const RetrievalResponseSchema = z.object({
     status: z.enum(["200", "400", "500"]),
-    responseBody: z.any().optional()
+    responseBody: z.any()
 });
-
+const CustomResponseSchema = z.object({
+    status: z.enum(["200", "400", "500"]),
+    other: z.any().optional()
+})
 
 export const ActionSchema = z.object({
     /**
@@ -27,7 +30,7 @@ export const ActionSchema = z.object({
      * Types of action, where `Execution Types` return a predefined response with the status of their action 
      * and `Retrieval Types` return a response object with the status and the response body
      */
-    type: z.enum(["Execution", "Retrieval"]),
+    type: z.enum(["Execution", "Retrieval", "Custom"]),
 
     /**
      * Defines the action
@@ -43,7 +46,7 @@ export const ActionSchema = z.object({
      * Function to execute the action, 
      * @returns `type of ExecutionResponseSchema` or `RetrievalResponseSchema`
      */
-    function: z.function().args(ParamsSchema).returns(z.promise(z.union([ExecutionResponseSchema, RetrievalResponseSchema])))
+    function: z.function().args(ParamsSchema).returns(z.promise(z.union([ExecutionResponseSchema, RetrievalResponseSchema, CustomResponseSchema])))
 });
 
 
@@ -62,6 +65,11 @@ export const AgentSchema = z.object({
      * Simple description of the agent's capabilities and areas of use
      */
     description: z.string(),
+
+    /**
+     * A list of dependencies for packages that and agent requires to work
+     */
+    dependency: z.array(z.object({package: z.string(), version: z.string()})).optional(),
     
     /**
      * Array of actions (tools) that the agent can interface with
@@ -89,19 +97,10 @@ export class Agent {
         if (this.system) {
             this.messages.push({ role: "system", content: this.system });
         }
-
-        // Return a Proxy to make the instance callable
-        return new Proxy(this, {
-            apply: async (target, thisArg, args: [string]) => {
-                return await target.call(args[0]); // Forward call to the `call` method
-            },
-        });
     }
 
-    async call(task: string = "") {
-        if (task) {
-            this.messages.push({ role: "user", content: task });
-        }
+    async work() {
+        this.messages.push({ role: "user", content: `Execute this task: [${this.task}]` });
         const result = await this.execute();
         this.messages.push({ role: "assistant", content: result || "" });
         return result;

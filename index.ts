@@ -2,6 +2,7 @@ import Groq from 'groq-sdk';
 import { AgentCall, AgentCallWithAnswer, FindAgent } from './core/utils';
 import { AgentType, Agent } from './core/agents';
 import {ToolUseModels} from "./core/types"
+import {DependencyType} from "./agents/agentBody"
 
 export class GroqAgent {
     /**
@@ -75,6 +76,8 @@ export class GroqAgent {
     public create( task:string,  system?: string, agentBody?: AgentType):Agent {
         return new Agent(system, agentBody, this.model, task);
     }
+
+    public installDependencies(dependencies:DependencyType){}
 }
 
 async function Demo() {
