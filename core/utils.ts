@@ -2,25 +2,26 @@ import { AgentType } from "./agents";
 import { tool, generateText, CoreTool } from 'ai';
 import { groq } from "@ai-sdk/groq";
 import { z } from "zod";
-import { CommandResult, DependencyTypeSchema, ToolUseModels } from "./types";
+import { CommandResult, DependencyTypeSchema, ParamsType, ToolUseModels } from "./types";
 import { DependencyType } from "../core/types";
 import { exec } from "child_process";
 
+
 const DefaultSystemPrompt = `
-You are an AI agent designed to assist with various tasks. Your primary function is to orchestrate other agents to achieve predefined tasks efficiently. You have access to the following actions: useTerminal.
+You are an AI agent designed to assist with various tasks. Your primary function is to orchestrate other agents to achieve predefined tasks efficiently.
 `;
 
 const DefaultAgentBody: AgentType = {
     id: "00000000000000000000",
-    name: "Orchestrator Agent",
-    description: "Agent for orchestrating other agents in the aim to achieve a predefined task",
+    name: "Master Agent",
+    description: "Agent for orchestrating other agents in the aim to achieve a predefined task, You have access to the following actions: useTerminal. findAgent",
     actions: [
         {
             name: "useTerminal",
-            description: "Execute commands on the terminal. Restricted to installation on NPM packages",
+            description: "Execute commands on a terminal. Currently restricted to installing npm packages",
             type: "Execution",
             params: z.array(DependencyTypeSchema),
-            function: async (params: Record<string, any>) => {
+            function: async (params: ParamsType) => {
                 const dependencies: DependencyType[] = params as DependencyType[];
                 const command = `npm install ${dependencies.map(dep => `${dep.package}@${dep.version}`).join(" ")}`;
                 const result = await executeCommand(command);

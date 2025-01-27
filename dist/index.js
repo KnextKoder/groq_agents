@@ -90,6 +90,7 @@ function Demo() {
         console.log(client.models()); // logs all available models
         client.agents(); // logs all available agents +> should log all available agent
         const agent = client.create("Write a poem", "You are a poet");
+        agent.work();
         agent.messages[-1].content; // logs the last message content
     });
 }

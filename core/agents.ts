@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ToolUseModels, RoleType, MessageType } from "./types";
+import { ToolUseModels, MessageType, DependencyTypeSchema } from "./types";
 import {tool, generateText, CoreTool} from 'ai'
 import { groq } from "@ai-sdk/groq";
 import { DefaultAgentBody, DefaultSystemPrompt } from "./utils";
@@ -40,7 +40,7 @@ export const ActionSchema = z.object({
     /**
      * Parameters for the action, it accepts any key-value pairs where the keys are strings and the values can be of any type
      */
-    params: ParamsSchema.optional(),
+    params: ParamsSchema.default({}),
 
     /**
      * Function to execute the action, 
@@ -48,7 +48,6 @@ export const ActionSchema = z.object({
      */
     function: z.function().args(ParamsSchema).returns(z.promise(z.union([ExecutionResponseSchema, RetrievalResponseSchema, CustomResponseSchema])))
 });
-
 
 export const AgentSchema = z.object({
     /**
@@ -69,7 +68,7 @@ export const AgentSchema = z.object({
     /**
      * A list of dependencies for packages that and agent requires to work
      */
-    dependency: z.array(z.object({package: z.string(), version: z.string()})).optional(),
+    dependency: z.array(DependencyTypeSchema).optional(),
     
     /**
      * Array of actions (tools) that the agent can interface with
@@ -99,26 +98,42 @@ export class Agent {
         }
     }
 
-    async work() {
-        this.messages.push({ role: "user", content: `Execute this task: [${this.task}]` });
+    public async _call() {
+        this.messages.push({ role: "user", content: `${this.task}` });
         const result = await this.execute();
         this.messages.push({ role: "assistant", content: result || "" });
         return result;
     }
 
-    async execute() {
+    public async work() {
+        this.messages.push({ role: "user", content: `${this.task}` });
+        const result = await this.execute();
+        this.messages.push({ role: "assistant", content: result || "" });
+        return result;
+    }
+
+    private async execute() {
         const formattedMessages = this.messages.map(message => ({
             role: message.role,
             content: message.content,
         }));
+
+        const data = {
+            model: this.model,
+            system: this.system,
+            prompt: this.task,
+            messages: formattedMessages,
+            activeAgent: this.agentBody
+        }
+        console.log("Piping Data...", data)
 
         const completion = await generateText({
             model: groq(this.model),
             system: this.system,
             prompt: this.task,
             messages: formattedMessages,
-            tools: this.agentBody?.actions.reduce((acc, action) => {
-                const paramsSchema = z.object(action.params ?? {});
+            tools: this.agentBody.actions.reduce((acc, action) => {
+                const paramsSchema = z.object(action.params);
                 acc[action.name] = tool({
                     description: action.description,
                     parameters: paramsSchema,
@@ -135,12 +150,12 @@ export class Agent {
         return completion.text;
     }
 
-    async callAgent(model: ToolUseModels) {
+    public async useAgent(model: ToolUseModels) {
         const actionNames = this.agentBody.actions.map(action => action.name).join(", ");
         const tools: Record<string, CoreTool> = {};
 
         this.agentBody.actions.forEach(action => {
-            const paramsSchema = z.object(action.params ?? {});
+            const paramsSchema = z.object(action.params);
             tools[action.name] = tool({
                 description: action.description,
                 parameters: paramsSchema,
@@ -161,12 +176,12 @@ export class Agent {
         console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`);
     }
 
-    async callAgentWithAnswer(model: ToolUseModels) {
+    async useAgentWithAnswer(model: ToolUseModels) {
         const actionNames = this.agentBody.actions.map(action => action.name).join(", ");
         const tools: Record<string, CoreTool> = {};
 
         this.agentBody.actions.forEach(action => {
-            const paramsSchema = z.object(action.params ?? {});
+            const paramsSchema = z.object(action.params);
             tools[action.name] = tool({
                 description: action.description,
                 parameters: paramsSchema,

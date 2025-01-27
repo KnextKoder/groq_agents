@@ -16,17 +16,17 @@ const zod_1 = require("zod");
 const types_1 = require("./types");
 const child_process_1 = require("child_process");
 const DefaultSystemPrompt = `
-You are an AI agent designed to assist with various tasks. Your primary function is to orchestrate other agents to achieve predefined tasks efficiently. You have access to the following actions: useTerminal.
+You are an AI agent designed to assist with various tasks. Your primary function is to orchestrate other agents to achieve predefined tasks efficiently.
 `;
 exports.DefaultSystemPrompt = DefaultSystemPrompt;
 const DefaultAgentBody = {
     id: "00000000000000000000",
-    name: "Orchestrator Agent",
-    description: "Agent for orchestrating other agents in the aim to achieve a predefined task",
+    name: "Master Agent",
+    description: "Agent for orchestrating other agents in the aim to achieve a predefined task, You have access to the following actions: useTerminal. findAgent",
     actions: [
         {
             name: "useTerminal",
-            description: "Execute commands on the terminal. Restricted to installation on NPM packages",
+            description: "Execute commands on a terminal. Currently restricted to installing npm packages",
             type: "Execution",
             params: zod_1.z.array(types_1.DependencyTypeSchema),
             function: (params) => __awaiter(void 0, void 0, void 0, function* () {

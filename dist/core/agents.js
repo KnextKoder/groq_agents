@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Agent = exports.AgentSchema = exports.ActionSchema = exports.ParamsSchema = void 0;
 const zod_1 = require("zod");
+const types_1 = require("./types");
 const ai_1 = require("ai");
 const groq_1 = require("@ai-sdk/groq");
 const utils_1 = require("./utils");
@@ -44,7 +45,7 @@ exports.ActionSchema = zod_1.z.object({
     /**
      * Parameters for the action, it accepts any key-value pairs where the keys are strings and the values can be of any type
      */
-    params: exports.ParamsSchema.optional(),
+    params: exports.ParamsSchema.default({}),
     /**
      * Function to execute the action,
      * @returns `type of ExecutionResponseSchema` or `RetrievalResponseSchema`
@@ -67,7 +68,7 @@ exports.AgentSchema = zod_1.z.object({
     /**
      * A list of dependencies for packages that and agent requires to work
      */
-    dependency: zod_1.z.array(zod_1.z.object({ package: zod_1.z.string(), version: zod_1.z.string() })).optional(),
+    dependency: zod_1.z.array(types_1.DependencyTypeSchema).optional(),
     /**
      * Array of actions (tools) that the agent can interface with
      */
@@ -84,29 +85,43 @@ class Agent {
             this.messages.push({ role: "system", content: this.system });
         }
     }
+    _call() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.messages.push({ role: "user", content: `${this.task}` });
+            const result = yield this.execute();
+            this.messages.push({ role: "assistant", content: result || "" });
+            return result;
+        });
+    }
     work() {
         return __awaiter(this, void 0, void 0, function* () {
-            this.messages.push({ role: "user", content: `Execute this task: [${this.task}]` });
+            this.messages.push({ role: "user", content: `${this.task}` });
             const result = yield this.execute();
             this.messages.push({ role: "assistant", content: result || "" });
             return result;
         });
     }
     execute() {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             const formattedMessages = this.messages.map(message => ({
                 role: message.role,
                 content: message.content,
             }));
+            const data = {
+                model: this.model,
+                system: this.system,
+                prompt: this.task,
+                messages: formattedMessages,
+                activeAgent: this.agentBody
+            };
+            console.log("Piping Data...", data);
             const completion = yield (0, ai_1.generateText)({
                 model: (0, groq_1.groq)(this.model),
                 system: this.system,
                 prompt: this.task,
                 messages: formattedMessages,
-                tools: (_a = this.agentBody) === null || _a === void 0 ? void 0 : _a.actions.reduce((acc, action) => {
-                    var _a;
-                    const paramsSchema = zod_1.z.object((_a = action.params) !== null && _a !== void 0 ? _a : {});
+                tools: this.agentBody.actions.reduce((acc, action) => {
+                    const paramsSchema = zod_1.z.object(action.params);
                     acc[action.name] = (0, ai_1.tool)({
                         description: action.description,
                         parameters: paramsSchema,
@@ -121,13 +136,12 @@ class Agent {
             return completion.text;
         });
     }
-    callAgent(model) {
+    useAgent(model) {
         return __awaiter(this, void 0, void 0, function* () {
             const actionNames = this.agentBody.actions.map(action => action.name).join(", ");
             const tools = {};
             this.agentBody.actions.forEach(action => {
-                var _a;
-                const paramsSchema = zod_1.z.object((_a = action.params) !== null && _a !== void 0 ? _a : {});
+                const paramsSchema = zod_1.z.object(action.params);
                 tools[action.name] = (0, ai_1.tool)({
                     description: action.description,
                     parameters: paramsSchema,
@@ -146,13 +160,12 @@ class Agent {
             console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`);
         });
     }
-    callAgentWithAnswer(model) {
+    useAgentWithAnswer(model) {
         return __awaiter(this, void 0, void 0, function* () {
             const actionNames = this.agentBody.actions.map(action => action.name).join(", ");
             const tools = {};
             this.agentBody.actions.forEach(action => {
-                var _a;
-                const paramsSchema = zod_1.z.object((_a = action.params) !== null && _a !== void 0 ? _a : {});
+                const paramsSchema = zod_1.z.object(action.params);
                 tools[action.name] = (0, ai_1.tool)({
                     description: action.description,
                     parameters: paramsSchema,
