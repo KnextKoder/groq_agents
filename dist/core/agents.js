@@ -75,12 +75,13 @@ exports.AgentSchema = zod_1.z.object({
     actions: zod_1.z.array(exports.ActionSchema)
 });
 class Agent {
-    constructor(system = utils_1.DefaultSystemPrompt, agentBody, model, task) {
+    constructor(system = utils_1.DefaultSystemPrompt, agentBody, model, task, api_key) {
         this.system = system || utils_1.DefaultSystemPrompt;
         this.agentBody = agentBody || utils_1.DefaultAgentBody;
         this.model = model;
         this.messages = [];
         this.task = task;
+        this.api_key = api_key;
         if (this.system) {
             this.messages.push({ role: "system", content: this.system });
         }
@@ -110,15 +111,14 @@ class Agent {
             const data = {
                 model: this.model,
                 system: this.system,
-                prompt: this.task,
                 messages: formattedMessages,
                 activeAgent: this.agentBody
             };
             console.log("Piping Data...", data);
+            const groq = (0, groq_1.createGroq)({ apiKey: this.api_key });
             const completion = yield (0, ai_1.generateText)({
-                model: (0, groq_1.groq)(this.model),
+                model: groq(this.model),
                 system: this.system,
-                prompt: this.task,
                 messages: formattedMessages,
                 tools: this.agentBody.actions.reduce((acc, action) => {
                     const paramsSchema = zod_1.z.object(action.params);
@@ -140,6 +140,7 @@ class Agent {
         return __awaiter(this, void 0, void 0, function* () {
             const actionNames = this.agentBody.actions.map(action => action.name).join(", ");
             const tools = {};
+            const groq = (0, groq_1.createGroq)({ apiKey: this.api_key });
             this.agentBody.actions.forEach(action => {
                 const paramsSchema = zod_1.z.object(action.params);
                 tools[action.name] = (0, ai_1.tool)({
@@ -151,7 +152,7 @@ class Agent {
                 });
             });
             const { toolCalls } = yield (0, ai_1.generateText)({
-                model: (0, groq_1.groq)(model),
+                model: groq(model),
                 tools,
                 system: `You are ${this.agentBody.name}. Your primary function is ${this.agentBody.description}. You can perform the following actions: ${actionNames}.`,
                 prompt: "",
@@ -164,6 +165,7 @@ class Agent {
         return __awaiter(this, void 0, void 0, function* () {
             const actionNames = this.agentBody.actions.map(action => action.name).join(", ");
             const tools = {};
+            const groq = (0, groq_1.createGroq)({ apiKey: this.api_key });
             this.agentBody.actions.forEach(action => {
                 const paramsSchema = zod_1.z.object(action.params);
                 tools[action.name] = (0, ai_1.tool)({
@@ -185,7 +187,7 @@ class Agent {
                 }),
             });
             const { toolCalls } = yield (0, ai_1.generateText)({
-                model: (0, groq_1.groq)(model),
+                model: groq(model),
                 tools,
                 system: `You are ${this.agentBody.name}. Your primary function is ${this.agentBody.description}. You can perform the following actions: ${actionNames}.`,
                 prompt: "",

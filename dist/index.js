@@ -20,7 +20,7 @@ class GroqAgent {
     constructor(api_key, model) {
         this.api_key = api_key;
         this.model = model;
-        this.GroqClient = new groq_sdk_1.default({ apiKey: api_key });
+        this.GroqClient = new groq_sdk_1.default({ apiKey: this.api_key });
     }
     /**
      * This method lists all the available agents and their agent id. Select a specific agent by calling the `agent` method and with the agent's id as a parameter
@@ -79,19 +79,9 @@ class GroqAgent {
      * @returns an instance of the Agent class
      */
     create(task, system, agentBody) {
-        return new agents_1.Agent(system, agentBody, this.model, task);
+        return new agents_1.Agent(system, agentBody, this.model, task, this.api_key);
     }
     installDependencies(dependencies) { }
 }
 exports.GroqAgent = GroqAgent;
-function Demo() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const client = new GroqAgent("api_key", 'llama3-70b-8192');
-        console.log(client.models()); // logs all available models
-        client.agents(); // logs all available agents +> should log all available agent
-        const agent = client.create("Write a poem", "You are a poet");
-        agent.work();
-        agent.messages[-1].content; // logs the last message content
-    });
-}
 exports.default = GroqAgent;

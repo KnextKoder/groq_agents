@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ToolUseModels, MessageType, DependencyTypeSchema } from "./types";
 import {tool, generateText, CoreTool} from 'ai'
-import { groq } from "@ai-sdk/groq";
+import { createGroq } from "@ai-sdk/groq";
 import { DefaultAgentBody, DefaultSystemPrompt } from "./utils";
 
 
@@ -84,19 +84,23 @@ export class Agent {
     private agentBody: AgentType;
     public model: ToolUseModels
     private task: string;
+    private api_key: string
     messages: MessageType[];
 
-    constructor(system: string|undefined = DefaultSystemPrompt, agentBody: AgentType|undefined, model: ToolUseModels, task: string) {
+    constructor(system: string|undefined = DefaultSystemPrompt, agentBody: AgentType|undefined, model: ToolUseModels, task: string, api_key: string) {
         this.system = system || DefaultSystemPrompt;
         this.agentBody = agentBody || DefaultAgentBody;
         this.model = model;
         this.messages = [];
         this.task = task;
+        this.api_key = api_key
 
         if (this.system) {
             this.messages.push({ role: "system", content: this.system });
         }
     }
+
+    
 
     public async _call() {
         this.messages.push({ role: "user", content: `${this.task}` });
@@ -117,20 +121,20 @@ export class Agent {
             role: message.role,
             content: message.content,
         }));
-
+    
         const data = {
             model: this.model,
             system: this.system,
-            prompt: this.task,
             messages: formattedMessages,
             activeAgent: this.agentBody
         }
         console.log("Piping Data...", data)
 
+        const groq = createGroq({apiKey: this.api_key});
+    
         const completion = await generateText({
             model: groq(this.model),
             system: this.system,
-            prompt: this.task,
             messages: formattedMessages,
             tools: this.agentBody.actions.reduce((acc, action) => {
                 const paramsSchema = z.object(action.params);
@@ -144,15 +148,15 @@ export class Agent {
                 return acc;
             }, {} as Record<string, CoreTool>),
             maxSteps: 10,
-            
         });
-
+    
         return completion.text;
     }
 
     public async useAgent(model: ToolUseModels) {
         const actionNames = this.agentBody.actions.map(action => action.name).join(", ");
         const tools: Record<string, CoreTool> = {};
+        const groq = createGroq({apiKey: this.api_key});
 
         this.agentBody.actions.forEach(action => {
             const paramsSchema = z.object(action.params);
@@ -179,6 +183,7 @@ export class Agent {
     async useAgentWithAnswer(model: ToolUseModels) {
         const actionNames = this.agentBody.actions.map(action => action.name).join(", ");
         const tools: Record<string, CoreTool> = {};
+        const groq = createGroq({apiKey: this.api_key});
 
         this.agentBody.actions.forEach(action => {
             const paramsSchema = z.object(action.params);

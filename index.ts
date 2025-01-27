@@ -16,7 +16,7 @@ export class GroqAgent {
     constructor(api_key: string, model: ToolUseModels) {
         this.api_key = api_key;
         this.model = model;
-        this.GroqClient = new Groq({ apiKey: api_key });
+        this.GroqClient = new Groq({ apiKey: this.api_key });
     }
 
     /**
@@ -75,20 +75,10 @@ export class GroqAgent {
      * @returns an instance of the Agent class
      */
     public create( task:string,  system?: string, agentBody?: AgentType):Agent {
-        return new Agent(system, agentBody, this.model, task);
+        return new Agent(system, agentBody, this.model, task, this.api_key);
     }
 
     public installDependencies(dependencies:DependencyType){}
 }
-
-async function Demo() {
-    const client = new GroqAgent("api_key", 'llama3-70b-8192')
-    console.log(client.models()); // logs all available models
-    client.agents(); // logs all available agents +> should log all available agent
-    const agent = client.create("Write a poem", "You are a poet")
-    agent.work()
-    agent.messages[-1].content // logs the last message content
-}
-
 
 export default GroqAgent;
