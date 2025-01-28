@@ -3,7 +3,7 @@ import { tool, generateText, CoreTool } from 'ai';
 import { groq } from "@ai-sdk/groq";
 import { z } from "zod";
 import { CommandResult, DependencyTypeSchema, ParamsType, ToolUseModels } from "./types";
-import { UseTerminal } from "./tools/tools";
+import { FindAgentByDes, UseTerminal } from "./tools/tools";
 
 
 async function AgentCall(agent: AgentType, model: ToolUseModels) {
@@ -137,54 +137,6 @@ async function FindAgent(id: string): Promise<AgentType> {
                 function: async (params) => {
                     // Simulate an API call to fetch data
                     const response = await fetch(`https://api.example.com/fetch_data?param1=${params.param1}`);
-                    const data = await response.json();
-                    return { status: response.status.toString() as "200" | "400" | "500", responseBody: data };
-                }
-            }
-        ]
-    };
-
-    return agent;
-}
-
-async function FindAgentByDes(description:string): Promise<AgentType> {
-    "use server"
-    // Dummy Implementation
-    const agent: AgentType = {
-        id: "0987654321",
-        name: "Y-Agent",
-        description: description,
-        actions: [
-            {
-                name: "update_status",
-                type: "Execution",
-                description: "Updates the status on the Y social media platform",
-                params: {
-                    status: "example status"
-                },
-                function: async (params) => {
-                    // Simulate an API call to update status
-                    const response = await fetch('https://api.example.com/update_status', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(params)
-                    });
-                    const data = await response.json();
-                    return { status: response.status.toString() as "200" | "400" | "500", message: data.message };
-                }
-            },
-            {
-                name: "get_user_info",
-                type: "Retrieval",
-                description: "Retrieves user information from the Y social media platform",
-                params: {
-                    userId: "exampleUserId"
-                },
-                function: async (params) => {
-                    // Simulate an API call to get user information
-                    const response = await fetch(`https://api.example.com/get_user_info?userId=${params.userId}`);
                     const data = await response.json();
                     return { status: response.status.toString() as "200" | "400" | "500", responseBody: data };
                 }

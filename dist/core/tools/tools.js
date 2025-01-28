@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UseTerminal = void 0;
+exports.FindAgentByDes = exports.UseTerminal = void 0;
 const toolFunctions_1 = require("./toolFunctions");
 function UseTerminal(params) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -23,3 +23,52 @@ function UseTerminal(params) {
     });
 }
 exports.UseTerminal = UseTerminal;
+function FindAgentByDes(description) {
+    "use server";
+    return __awaiter(this, void 0, void 0, function* () {
+        // Dummy Implementation
+        const agent = {
+            id: "0987654321",
+            name: "Y-Agent",
+            description: description,
+            actions: [
+                {
+                    name: "update_status",
+                    type: "Execution",
+                    description: "Updates the status on the Y social media platform",
+                    params: {
+                        status: "example status"
+                    },
+                    function: (params) => __awaiter(this, void 0, void 0, function* () {
+                        // Simulate an API call to update status
+                        const response = yield fetch('https://api.example.com/update_status', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(params)
+                        });
+                        const data = yield response.json();
+                        return { status: response.status.toString(), message: data.message };
+                    })
+                },
+                {
+                    name: "get_user_info",
+                    type: "Retrieval",
+                    description: "Retrieves user information from the Y social media platform",
+                    params: {
+                        userId: "exampleUserId"
+                    },
+                    function: (params) => __awaiter(this, void 0, void 0, function* () {
+                        // Simulate an API call to get user information
+                        const response = yield fetch(`https://api.example.com/get_user_info?userId=${params.userId}`);
+                        const data = yield response.json();
+                        return { status: response.status.toString(), responseBody: data };
+                    })
+                }
+            ]
+        };
+        return agent;
+    });
+}
+exports.FindAgentByDes = FindAgentByDes;
