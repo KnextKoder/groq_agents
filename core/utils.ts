@@ -3,104 +3,8 @@ import { tool, generateText, CoreTool } from 'ai';
 import { groq } from "@ai-sdk/groq";
 import { z } from "zod";
 import { CommandResult, DependencyTypeSchema, ParamsType, ToolUseModels } from "./types";
-import { DependencyType } from "../core/types";
-import { exec } from "child_process";
+import { UseTerminal } from "./tools/tools";
 
-
-const DefaultSystemPrompt = `
-You are an AI agent designed to assist with various tasks. Your primary function is to orchestrate other agents to achieve predefined tasks efficiently.
-`;
-
-const DefaultAgentBody: AgentType = {
-    id: "00000000000000000000",
-    name: "Master Agent",
-    description: "Agent for orchestrating other agents in the aim to achieve a predefined task, You have access to the following actions: useTerminal. findAgent",
-    actions: [
-        {
-            name: "useTerminal",
-            description: "Execute commands on a terminal. Currently restricted to installing npm packages",
-            type: "Execution",
-            params: z.array(DependencyTypeSchema),
-            function: async (params: ParamsType) => {
-                const dependencies: DependencyType[] = params as DependencyType[];
-                const command = `npm install ${dependencies.map(dep => `${dep.package}@${dep.version}`).join(" ")}`;
-                const result = await executeCommand(command);
-                return {
-                    status: result.stderr ? "500" : "200",
-                    message: result.stderr || result.stdout
-                };
-            }
-        }
-    ]
-};
-
-async function executeCommand(command: string): Promise<CommandResult> {
-    return new Promise((resolve, reject) => {
-        const allowedCommands = [`bun install`, `npm install`];
-
-        if (!allowedCommands.some(allowedCommand => command.startsWith(allowedCommand))) {
-            return reject(new Error("Command not allowed. Only `bun install` or `npm install` are permitted."));
-        }
-
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                resolve({ stdout: "", stderr: error.message });
-                return;
-            }
-
-            resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
-        });
-    });
-}
-
-async function FindAgent(id: string): Promise<AgentType> {
-    // Dummy Implementation
-    const agent: AgentType = {
-        id: "1234567890",
-        name: "X-Agent",
-        description: "Agent for Interfacing with the X social media platform",
-        actions: [
-            {
-                name: "create_post",
-                type: "Execution",
-                description: "Creates a post on the X social media platform",
-                params: {
-                    param1: "example",
-                    param2: 42,
-                    param3: true
-                },
-                function: async (params) => {
-                    // Simulate an API call to create a post
-                    const response = await fetch('https://api.example.com/create_post', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(params)
-                    });
-                    const data = await response.json();
-                    return { status: response.status.toString() as "200" | "400" | "500", message: data.message };
-                }
-            },
-            {
-                name: "fetch_data",
-                type: "Retrieval",
-                description: "Fetches data from the X social media platform",
-                params: {
-                    param1: "example"
-                },
-                function: async (params) => {
-                    // Simulate an API call to fetch data
-                    const response = await fetch(`https://api.example.com/fetch_data?param1=${params.param1}`);
-                    const data = await response.json();
-                    return { status: response.status.toString() as "200" | "400" | "500", responseBody: data };
-                }
-            }
-        ]
-    };
-
-    return agent;
-}
 
 async function AgentCall(agent: AgentType, model: ToolUseModels) {
     const actionNames = agent.actions.map(action => action.name).join(", ");
@@ -158,5 +62,138 @@ async function AgentCallWithAnswer(agent: AgentType, model: ToolUseModels) {
 
     console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`);
 }
+
+
+const DefaultSystemPrompt = `
+You are an AI agent designed to assist with various tasks. Your primary objective is to achieve the task and return a desired response, or return a reason as to why you are unable to achieve this task. You are able to orchestrate other agents similar yourself, but are more focused on interfacing with a specific service, api or sdk in order to achieve predefined tasks efficiently.
+`;
+
+const DefaultAgentBody: AgentType = {
+    id: "00000000000000000000",
+    name: "Master Agent",
+    description: "Agent for orchestrating other agents with the aim of achieving a predefined task, You have access to the following actions: useTerminal. findAgent",
+    actions: [
+        {
+            name: "useTerminal",
+            description: "Execute commands on a terminal. Currently restricted to installing npm packages",
+            type: "Execution",
+            params: z.array(DependencyTypeSchema),
+            function:  (params: ParamsType) => UseTerminal(params)
+        },
+        {
+            name: "findAgent",
+            description: "Search for an agent to orchestrate with based off a description of the agent",
+            type: "Retrieval",
+            params: z.object({ description: z.string() }),
+            function: async function (params: ParamsType): Promise<{ status: "200" | "400" | "500"; responseBody: { agent: AgentType; } }> {
+                const response: AgentType = await FindAgentByDes(params.description);
+                return {
+                    status: "200",
+                    responseBody: { agent: response as AgentType }
+                };
+            }
+        }
+    ]
+};
+
+
+
+async function FindAgent(id: string): Promise<AgentType> {
+    // Dummy Implementation
+    const agent: AgentType = {
+        id: "1234567890",
+        name: "X-Agent",
+        description: "Agent for Interfacing with the X social media platform",
+        actions: [
+            {
+                name: "create_post",
+                type: "Execution",
+                description: "Creates a post on the X social media platform",
+                params: {
+                    param1: "example",
+                    param2: 42,
+                    param3: true
+                },
+                function: async (params) => {
+                    // Simulate an API call to create a post
+                    const response = await fetch('https://api.example.com/create_post', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(params)
+                    });
+                    const data = await response.json();
+                    return { status: response.status.toString() as "200" | "400" | "500", message: data.message };
+                }
+            },
+            {
+                name: "fetch_data",
+                type: "Retrieval",
+                description: "Fetches data from the X social media platform",
+                params: {
+                    param1: "example"
+                },
+                function: async (params) => {
+                    // Simulate an API call to fetch data
+                    const response = await fetch(`https://api.example.com/fetch_data?param1=${params.param1}`);
+                    const data = await response.json();
+                    return { status: response.status.toString() as "200" | "400" | "500", responseBody: data };
+                }
+            }
+        ]
+    };
+
+    return agent;
+}
+
+async function FindAgentByDes(description:string): Promise<AgentType> {
+    "use server"
+    // Dummy Implementation
+    const agent: AgentType = {
+        id: "0987654321",
+        name: "Y-Agent",
+        description: description,
+        actions: [
+            {
+                name: "update_status",
+                type: "Execution",
+                description: "Updates the status on the Y social media platform",
+                params: {
+                    status: "example status"
+                },
+                function: async (params) => {
+                    // Simulate an API call to update status
+                    const response = await fetch('https://api.example.com/update_status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(params)
+                    });
+                    const data = await response.json();
+                    return { status: response.status.toString() as "200" | "400" | "500", message: data.message };
+                }
+            },
+            {
+                name: "get_user_info",
+                type: "Retrieval",
+                description: "Retrieves user information from the Y social media platform",
+                params: {
+                    userId: "exampleUserId"
+                },
+                function: async (params) => {
+                    // Simulate an API call to get user information
+                    const response = await fetch(`https://api.example.com/get_user_info?userId=${params.userId}`);
+                    const data = await response.json();
+                    return { status: response.status.toString() as "200" | "400" | "500", responseBody: data };
+                }
+            }
+        ]
+    };
+
+    return agent;
+}
+
 
 export { FindAgent, AgentCall, AgentCallWithAnswer, DefaultAgentBody, DefaultSystemPrompt };
