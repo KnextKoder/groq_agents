@@ -1,42 +1,23 @@
 # Groq Agents
 
-Prebuilt task-specific AI agents running solely on Groq. *(Note: This project is currently under development.)*
+Prebuilt task-specific AI agents running exclusively on Groq hardware. This project is currently under development.
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
 - [API Reference](#api-reference)
   - [GroqAgent Class](#groqagent-class)
-    - [agents()](#agents)
-    - [selectAgent()](#selectagent)
-    - [call()](#call)
-    - [models()](#models)
-    - [create()](#create)
+    - [Methods](#methods)
+      - [agents()](#agents)
+      - [selectAgent(agentName)](#selectagentagentname)
+      - [call(input)](#callinput)
+      - [models()](#models)
+      - [create(prompt, systemMessage)](#createprompt-systemmessage)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Introduction
-
-The `groq_agents` library provides a suite of prebuilt AI agents designed for specific tasks, all powered by Groq's advanced AI models. This library aims to simplify the integration of AI-driven functionalities into applications by offering ready-to-use agents tailored for various purposes.
-
-## Features
-
-- **Prebuilt Agents**: Access a variety of agents designed for specific tasks.
-- **Groq-Powered**: Leverage the performance and capabilities of Groq's AI models.
-- **Easy Integration**: Simple API for seamless integration into your projects.
-
-## Get Started
-
-To get started, install the groq-agents npm package
-
-```bash
-npm install groq-agents
-```
-
-## Installation 
+## Installation
 
 To install the necessary dependencies, run:
 
@@ -46,105 +27,139 @@ npm install
 
 ## Usage
 
-After building the project, you can utilize the `GroqAgent` class as follows:
-
-```ts
-import GroqAgent from './dist/index';
-
-async function Demo() {
-    const client = new GroqAgent("api_key", 'llama3-70b-8192');
-    console.log(await client.models()); // Logs all available models
-    console.log(await client.agents()); // Logs all available agents
-    const agent = await client.create("Write a poem", "You are a poet");
-    console.log(agent.messages[agent.messages.length - 1].content); // Logs the last message content
-}
-
-Demo();
-```
-
-**Note**: Ensure that you have built the project before running the above code:
+To build the project, execute:
 
 ```bash
 npm run build
 ```
 
+Then, you can utilize the `GroqAgent` class as follows:
+
+```javascript
+import GroqAgent from './dist/index';
+
+async function demo() {
+    const client = new GroqAgent('your_api_key', 'llama3-70b-8192');
+    console.log(await client.models()); // Logs all available models
+    console.log(await client.agents()); // Logs all available agents
+    const agent = client.create('Write a poem', 'You are a poet');
+    console.log(agent.messages[agent.messages.length - 1].content); // Logs the last message content
+}
+
+demo();
+```
+
+Replace `'your_api_key'` with your actual Groq API key. You can obtain an API key by signing up at [Groq Console](https://console.groq.com/).
+
 ## API Reference
 
 ### GroqAgent Class
 
-The `GroqAgent` class serves as the primary interface for interacting with Groq's AI agents.
+The `GroqAgent` class provides methods to interact with Groq's AI models and agents.
 
-#### agents()
+#### Methods
 
-Retrieves a list of all available agents.
+##### agents()
 
-**Usage**:
+Retrieves a list of available agents.
+
+**Returns:**
+
+- `Promise<Array>`: An array of agent names.
+
+**Example:**
 
 ```javascript
 const availableAgents = await client.agents();
 console.log(availableAgents);
 ```
 
-#### selectAgent(agentId)
+##### selectAgent(agentName)
 
-Selects a specific agent by its ID.
+Selects a specific agent by name.
 
-**Parameters**:
+**Parameters:**
 
-- `agentId` (string): The ID of the agent to select.
+- `agentName` (string): The name of the agent to select.
 
-**Usage**:
+**Returns:**
+
+- `Object`: The selected agent object.
+
+**Example:**
 
 ```javascript
-client.selectAgent('agent_id');
+const agent = client.selectAgent('agent_name');
+console.log(agent);
 ```
 
-#### call(input)
+##### call(input)
 
 Sends input to the selected agent and retrieves the response.
 
-**Parameters**:
+**Parameters:**
 
-- `input` (string): The input message to send to the agent.
+- `input` (string): The input text to send to the agent.
 
-**Usage**:
+**Returns:**
+
+- `Promise<string>`: The agent's response.
+
+**Example:**
 
 ```javascript
-const response = await client.call('Your input message');
+const response = await agent.call('Your input text');
 console.log(response);
 ```
 
-#### models()
+##### models()
 
-Fetches a list of all available models.
+Fetches a list of available models.
 
-**Usage**:
+**Returns:**
+
+- `Promise<Array>`: An array of model names.
+
+**Example:**
 
 ```javascript
 const availableModels = await client.models();
 console.log(availableModels);
 ```
 
-#### create(prompt, context)
+##### create(prompt, systemMessage)
 
-Creates a new agent with a specific prompt and context.
+Creates a new agent with a specific prompt and system message.
 
-**Parameters**:
+**Parameters:**
 
 - `prompt` (string): The initial prompt for the agent.
-- `context` (string): The context or role for the agent.
+- `systemMessage` (string): The system message defining the agent's behavior.
 
-**Usage**:
+**Returns:**
+
+- `Object`: The created agent object.
+
+**Example:**
 
 ```javascript
-const newAgent = await client.create('Write a poem', 'You are a poet');
-console.log(newAgent);
+const agent = client.create('Write a poem', 'You are a poet');
+console.log(agent);
 ```
 
 ## Contributing
 
-Contributions are encouraged, please follow the highlighted steps below
+We welcome contributions to enhance this project. To contribute:
+
+1. Fork the repository.
+2. Create a new branch: `git checkout -b feature/YourFeature`.
+3. Commit your changes: `git commit -m 'Add YourFeature'`.
+4. Push to the branch: `git push origin feature/YourFeature`.
+5. Open a pull request.
+
+Please ensure your code adheres to the project's coding standards and includes appropriate tests.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
