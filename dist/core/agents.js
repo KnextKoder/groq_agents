@@ -9,49 +9,61 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Agent = exports.AgentSchema = exports.ActionSchema = exports.ParamsSchema = void 0;
+exports.Agent = exports.AgentSchema = exports.DiscriminatedActionSchema = exports.ParamsSchema = void 0;
 const zod_1 = require("zod");
 const types_1 = require("./types");
 const ai_1 = require("ai");
 const groq_1 = require("@ai-sdk/groq");
 const utils_1 = require("./utils");
+// --- Parameter Schema (unchanged) ---
 exports.ParamsSchema = zod_1.z.record(zod_1.z.any());
+// --- Response Schemas ---
 const ExecutionResponseSchema = zod_1.z.object({
     status: zod_1.z.enum(["200", "400", "500"]),
-    message: zod_1.z.string().optional()
+    message: zod_1.z.string(),
 });
 const RetrievalResponseSchema = zod_1.z.object({
     status: zod_1.z.enum(["200", "400", "500"]),
-    responseBody: zod_1.z.any()
+    responseBody: zod_1.z.record(zod_1.z.any()),
 });
 const CustomResponseSchema = zod_1.z.object({
     status: zod_1.z.enum(["200", "400", "500"]),
-    other: zod_1.z.any().optional()
+    other: zod_1.z.any(),
 });
-exports.ActionSchema = zod_1.z.object({
-    /**
-     * Defines the name for a specific action
-     */
+const ExecutionActionSchema = zod_1.z.object({
     name: zod_1.z.string(),
-    /**
-     * Types of action, where `Execution Types` return a predefined response with the status of their action
-     * and `Retrieval Types` return a response object with the status and the response body
-     */
-    type: zod_1.z.enum(["Execution", "Retrieval", "Custom"]),
-    /**
-     * Defines the action
-     */
+    type: zod_1.z.literal("Execution"),
     description: zod_1.z.string(),
-    /**
-     * Parameters for the action, it accepts any key-value pairs where the keys are strings and the values can be of any type
-     */
     params: exports.ParamsSchema.default({}),
-    /**
-     * Function to execute the action,
-     * @returns `type of ExecutionResponseSchema` or `RetrievalResponseSchema`
-     */
-    function: zod_1.z.function().args(exports.ParamsSchema).returns(zod_1.z.promise(zod_1.z.union([ExecutionResponseSchema, RetrievalResponseSchema, CustomResponseSchema])))
+    function: zod_1.z.function()
+        .args(exports.ParamsSchema)
+        .returns(zod_1.z.promise(ExecutionResponseSchema)),
 });
+const RetrievalActionSchema = zod_1.z.object({
+    name: zod_1.z.string(),
+    type: zod_1.z.literal("Retrieval"),
+    description: zod_1.z.string(),
+    params: exports.ParamsSchema.default({}),
+    function: zod_1.z.function()
+        .args(exports.ParamsSchema)
+        .returns(zod_1.z.promise(RetrievalResponseSchema)),
+});
+const CustomActionSchema = zod_1.z.object({
+    name: zod_1.z.string(),
+    type: zod_1.z.literal("Custom"),
+    description: zod_1.z.string(),
+    params: exports.ParamsSchema.default({}),
+    function: zod_1.z.function()
+        .args(exports.ParamsSchema)
+        .returns(zod_1.z.promise(CustomResponseSchema)),
+});
+// Combine them with a discriminated union
+exports.DiscriminatedActionSchema = zod_1.z.discriminatedUnion("type", [
+    ExecutionActionSchema,
+    RetrievalActionSchema,
+    CustomActionSchema,
+]);
+// --- Agent Schema ---
 exports.AgentSchema = zod_1.z.object({
     /**
      * Unique Agent ID
@@ -66,13 +78,13 @@ exports.AgentSchema = zod_1.z.object({
      */
     description: zod_1.z.string(),
     /**
-     * A list of dependencies for packages that and agent requires to work
+     * A list of dependencies for packages that an agent requires to work
      */
     dependency: zod_1.z.array(types_1.DependencyTypeSchema).optional(),
     /**
      * Array of actions (tools) that the agent can interface with
      */
-    actions: zod_1.z.array(exports.ActionSchema)
+    actions: zod_1.z.array(exports.DiscriminatedActionSchema),
 });
 class Agent {
     constructor(system = utils_1.DefaultSystemPrompt, agentBody, model, task, api_key) {

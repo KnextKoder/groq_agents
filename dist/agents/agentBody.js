@@ -22,7 +22,8 @@ const customAgent = {
             function: (params) => __awaiter(void 0, void 0, void 0, function* () {
                 console.log(params);
                 return {
-                    status: "200"
+                    status: "200",
+                    responseBody: {}
                 };
             })
         }

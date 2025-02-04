@@ -83,7 +83,7 @@ const DefaultAgentBody = {
     actions: [
         {
             name: "useTerminal",
-            description: "Execute commands on a terminal. Currently restricted to installing npm packages",
+            description: "Execute commands on a terminal. **Currently restricted to installing npm packages",
             type: "Execution",
             params: zod_1.z.array(types_1.DependencyTypeSchema),
             function: (params) => (0, tools_1.UseTerminal)(params)

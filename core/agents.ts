@@ -1,83 +1,99 @@
 import { z } from "zod";
 import { ToolUseModels, MessageType, DependencyTypeSchema } from "./types";
-import {tool, generateText, CoreTool} from 'ai'
+import { tool, generateText, CoreTool } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import { DefaultAgentBody, DefaultSystemPrompt } from "./utils";
 
+// --- Parameter Schema (unchanged) ---
+export const ParamsSchema = z.record(z.any());
 
-
-export const ParamsSchema = z.record(z.any())
+// --- Response Schemas ---
 const ExecutionResponseSchema = z.object({
-    status: z.enum(["200", "400", "500"]),
-    message: z.string().optional()
+  status: z.enum(["200", "400", "500"]),
+  message: z.string(),
 });
 const RetrievalResponseSchema = z.object({
-    status: z.enum(["200", "400", "500"]),
-    responseBody: z.any()
+  status: z.enum(["200", "400", "500"]),
+  responseBody: z.record(z.any()),
 });
 const CustomResponseSchema = z.object({
-    status: z.enum(["200", "400", "500"]),
-    other: z.any().optional()
-})
-
-export const ActionSchema = z.object({
-    /**
-     * Defines the name for a specific action
-     */
-    name: z.string(),
-
-    /**
-     * Types of action, where `Execution Types` return a predefined response with the status of their action 
-     * and `Retrieval Types` return a response object with the status and the response body
-     */
-    type: z.enum(["Execution", "Retrieval", "Custom"]),
-
-    /**
-     * Defines the action
-     */
-    description: z.string(),
-
-    /**
-     * Parameters for the action, it accepts any key-value pairs where the keys are strings and the values can be of any type
-     */
-    params: ParamsSchema.default({}),
-
-    /**
-     * Function to execute the action, 
-     * @returns `type of ExecutionResponseSchema` or `RetrievalResponseSchema`
-     */
-    function: z.function().args(ParamsSchema).returns(z.promise(z.union([ExecutionResponseSchema, RetrievalResponseSchema, CustomResponseSchema])))
+  status: z.enum(["200", "400", "500"]),
+  other: z.any(),
 });
 
+
+
+const ExecutionActionSchema = z.object({
+  name: z.string(),
+  type: z.literal("Execution"),
+  description: z.string(),
+  params: ParamsSchema.default({}),
+  function: z.function()
+    .args(ParamsSchema)
+    .returns(z.promise(ExecutionResponseSchema)),
+});
+
+
+
+const RetrievalActionSchema = z.object({
+  name: z.string(),
+  type: z.literal("Retrieval"),
+  description: z.string(),
+  params: ParamsSchema.default({}),
+  function: z.function()
+    .args(ParamsSchema)
+    .returns(z.promise(RetrievalResponseSchema)),
+});
+
+
+
+const CustomActionSchema = z.object({
+  name: z.string(),
+  type: z.literal("Custom"),
+  description: z.string(),
+  params: ParamsSchema.default({}),
+  function: z.function()
+    .args(ParamsSchema)
+    .returns(z.promise(CustomResponseSchema)),
+});
+
+// Combine them with a discriminated union
+export const DiscriminatedActionSchema = z.discriminatedUnion("type", [
+  ExecutionActionSchema,
+  RetrievalActionSchema,
+  CustomActionSchema,
+]);
+
+// --- Agent Schema ---
 export const AgentSchema = z.object({
-    /**
-     * Unique Agent ID
-     */
-    id: z.string(),
-
-    /**
-     * Name of the Agent
-     */
-    name: z.string(),
-    
-    /**
-     * Simple description of the agent's capabilities and areas of use
-     */
-    description: z.string(),
-
-    /**
-     * A list of dependencies for packages that and agent requires to work
-     */
-    dependency: z.array(DependencyTypeSchema).optional(),
-    
-    /**
-     * Array of actions (tools) that the agent can interface with
-     */
-    actions: z.array(ActionSchema)
+  /**
+   * Unique Agent ID
+   */
+  id: z.string(),
+  /**
+   * Name of the Agent
+   */
+  name: z.string(),
+  /**
+   * Simple description of the agent's capabilities and areas of use
+   */
+  description: z.string(),
+  /**
+   * A list of dependencies for packages that an agent requires to work
+   */
+  dependency: z.array(DependencyTypeSchema).optional(),
+  /**
+   * Array of actions (tools) that the agent can interface with
+   */
+  actions: z.array(DiscriminatedActionSchema),
 });
 
-export type Action = z.infer<typeof ActionSchema>;
+// Infer AgentType from the updated schema
 export type AgentType = z.infer<typeof AgentSchema>;
+
+// Optionally, define a type alias for actions:
+export type Action = z.infer<typeof DiscriminatedActionSchema>;
+
 
 export class Agent {
     private system: string;

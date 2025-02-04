@@ -63,7 +63,7 @@ function FindAgentByDes(description) {
                         // Simulate an API call to get user information
                         const response = yield fetch(`https://api.example.com/get_user_info?userId=${params.userId}`);
                         const data = yield response.json();
-                        return { status: response.status.toString(), responseBody: data };
+                        return { status: response.status.toString(), responseBody: { "data": data } };
                     })
                 }
             ]

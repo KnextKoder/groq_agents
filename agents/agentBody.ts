@@ -20,8 +20,8 @@ const customAgent: CustomAgentType = {
                 console.log(params)
 
                 return {
-                    status: "200"
-                    
+                    status: "200",
+                    responseBody: {}
                 }
             }
         }

@@ -81,4 +81,8 @@ export class GroqAgent {
     public installDependencies(dependencies:DependencyType){}
 }
 
+
+const agentClient = new GroqAgent("api_key", "llama-3.3-70b-versatile");
+const agent = agentClient.create("Create a 3d model in autocad");
+const response= agent.work()
 export default GroqAgent;

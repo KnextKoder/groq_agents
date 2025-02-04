@@ -52,7 +52,7 @@ async function FindAgentByDes(description:string): Promise<AgentType> {
                     // Simulate an API call to get user information
                     const response = await fetch(`https://api.example.com/get_user_info?userId=${params.userId}`);
                     const data = await response.json();
-                    return { status: response.status.toString() as "200" | "400" | "500", responseBody: data };
+                    return { status: response.status.toString() as "200" | "400" | "500", responseBody: { "data": data } };
                 }
             }
         ]

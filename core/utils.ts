@@ -63,7 +63,6 @@ async function AgentCallWithAnswer(agent: AgentType, model: ToolUseModels) {
     console.log(`Tool Calls: ${JSON.stringify(toolCalls, null, 2)}`);
 }
 
-
 const DefaultSystemPrompt = `
 You are an AI agent designed to assist with various tasks. Your primary objective is to achieve the task and return a desired response, or return a reason as to why you are unable to achieve this task. You are able to orchestrate other agents similar yourself, but are more focused on interfacing with a specific service, api or sdk in order to achieve predefined tasks efficiently.
 `;
@@ -75,7 +74,7 @@ const DefaultAgentBody: AgentType = {
     actions: [
         {
             name: "useTerminal",
-            description: "Execute commands on a terminal. Currently restricted to installing npm packages",
+            description: "Execute commands on a terminal. **Currently restricted to installing npm packages",
             type: "Execution",
             params: z.array(DependencyTypeSchema),
             function:  (params: ParamsType) => UseTerminal(params)
