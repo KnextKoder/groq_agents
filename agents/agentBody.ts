@@ -14,14 +14,14 @@ const customAgent: CustomAgentType = {
         {
             name: "",
             description: "",
-            type: "Retrieval",
+            type: "Execution",
             params: {},
             function: async (params) => {
                 console.log(params)
 
                 return {
                     status: "200",
-                    responseBody: {}
+                    message: "Success"
                 }
             }
         }

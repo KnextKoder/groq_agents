@@ -17,13 +17,13 @@ const customAgent = {
         {
             name: "",
             description: "",
-            type: "Retrieval",
+            type: "Execution",
             params: {},
             function: (params) => __awaiter(void 0, void 0, void 0, function* () {
                 console.log(params);
                 return {
                     status: "200",
-                    responseBody: {}
+                    message: "Success"
                 };
             })
         }
