@@ -16,14 +16,7 @@ const customAgent: CustomAgentType = {
             description: "",
             type: "Execution",
             params: {},
-            function: async (params) => {
-                console.log(params)
-
-                return {
-                    status: "200",
-                    message: "Success"
-                }
-            }
+            handlerKey: ""
         }
     ],
     dependencies: [

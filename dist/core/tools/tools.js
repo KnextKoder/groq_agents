@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -9,11 +32,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FindAgentByDes = exports.UseTerminal = void 0;
+exports.TerminalParamsSchema = exports.FindAgentByDes = exports.UseTerminal = void 0;
 const toolFunctions_1 = require("./toolFunctions");
+const zod_1 = require("zod");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const TerminalParamsSchema = zod_1.z.object({
+    dependencies: zod_1.z.array(zod_1.z.object({
+        package: zod_1.z.string(),
+        version: zod_1.z.string()
+    }))
+});
+exports.TerminalParamsSchema = TerminalParamsSchema;
 function UseTerminal(params) {
     return __awaiter(this, void 0, void 0, function* () {
-        const dependencies = params;
+        // Validate and transform the input
+        const validatedParams = TerminalParamsSchema.parse(params);
+        const dependencies = validatedParams.dependencies;
         const command = `npm install ${dependencies.map(dep => `${dep.package}@${dep.version}`).join(" ")}`;
         const result = yield (0, toolFunctions_1.executeCommand)(command);
         return {
@@ -26,47 +61,28 @@ exports.UseTerminal = UseTerminal;
 function FindAgentByDes(description) {
     "use server";
     return __awaiter(this, void 0, void 0, function* () {
-        // Dummy Implementation
+        var _a;
+        console.log(`Description: ${description}`);
+        const agentsJsonPath = path.join(__dirname, './core/memory/code/agents.jsonc');
+        const agentsJson = fs.readFileSync(agentsJsonPath, 'utf-8');
+        const agents = JSON.parse(agentsJson);
+        const agentMetadata = agents.find(agent => agent.description.includes(description));
+        if (!agentMetadata) {
+            throw new Error(`Agent with description ${description} not found`);
+        }
+        const functionDefinitionsPath = path.join(__dirname, '../memory/code/functionDumps', `${agentMetadata.id}.ts`); // Adjust path
+        const functionDefinitions = yield (_a = functionDefinitionsPath, Promise.resolve().then(() => __importStar(require(_a))));
         const agent = {
-            id: "0987654321",
-            name: "Y-Agent",
-            description: description,
-            actions: [
-                {
-                    name: "update_status",
-                    type: "Execution",
-                    description: "Updates the status on the Y social media platform",
-                    params: {
-                        status: "example status"
-                    },
-                    function: (params) => __awaiter(this, void 0, void 0, function* () {
-                        // Simulate an API call to update status
-                        const response = yield fetch('https://api.example.com/update_status', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(params)
-                        });
-                        const data = yield response.json();
-                        return { status: response.status.toString(), message: data.message };
-                    })
-                },
-                {
-                    name: "get_user_info",
-                    type: "Retrieval",
-                    description: "Retrieves user information from the Y social media platform",
-                    params: {
-                        userId: "exampleUserId"
-                    },
-                    function: (params) => __awaiter(this, void 0, void 0, function* () {
-                        // Simulate an API call to get user information
-                        const response = yield fetch(`https://api.example.com/get_user_info?userId=${params.userId}`);
-                        const data = yield response.json();
-                        return { status: response.status.toString(), responseBody: { "data": data } };
-                    })
-                }
-            ]
+            id: agentMetadata.id,
+            name: agentMetadata.name,
+            description: agentMetadata.description,
+            actions: Object.entries(functionDefinitions.actions).map(([name, func]) => ({
+                name: name,
+                type: "Execution",
+                description: `Description for ${name}`,
+                params: {},
+                handlerKey: `${name}_handler`
+            }))
         };
         return agent;
     });

@@ -1,65 +1,67 @@
 import { executeCommand } from "./toolFunctions";
 import { CommandResult, DependencyType, ParamsType } from "../types";
 import { AgentType } from "../agents";
+import { z } from "zod";
+import * as fs from 'fs';
+import * as path from 'path';
 
-async function UseTerminal(params: ParamsType): Promise<{status: "200"|"400"|"500", message: string}> {
-    const dependencies: DependencyType[] = params as DependencyType[];
+
+const TerminalParamsSchema = z.object({
+  dependencies: z.array(
+    z.object({
+      package: z.string(),
+      version: z.string()
+    })
+  )
+});
+
+type TerminalParams = z.infer<typeof TerminalParamsSchema>;
+
+async function UseTerminal(params: Record<string, any>): Promise<{status: "200"|"400"|"500", message: string}> {
+    // Validate and transform the input
+    const validatedParams = TerminalParamsSchema.parse(params);
+    const dependencies = validatedParams.dependencies;
+    
     const command = `npm install ${dependencies.map(dep => `${dep.package}@${dep.version}`).join(" ")}`;
     const result: CommandResult = await executeCommand(command);
+    
     return {
         status: result.stderr ? "500" : "200",
         message: result.stderr || result.stdout
     };
 }
 
+async function FindAgentByDes(description: string): Promise<AgentType> {
+    "use server";
+    console.log(`Description: ${description}`);
 
-async function FindAgentByDes(description:string): Promise<AgentType> {
-    "use server"
-    // Dummy Implementation
+    const agentsJsonPath = path.join(__dirname, './core/memory/code/agents.jsonc')
+    const agentsJson = fs.readFileSync(agentsJsonPath, 'utf-8');
+    const agents = JSON.parse(agentsJson) as {id: string; name: string; description: string;}[];
+    const agentMetadata = agents.find(agent => agent.description.includes(description));
+
+    if (!agentMetadata) {
+        throw new Error(`Agent with description ${description} not found`);
+    }
+
+    const functionDefinitionsPath = path.join(__dirname, '../memory/code/functionDumps', `${agentMetadata.id}.ts`); // Adjust path
+    const functionDefinitions = await import(functionDefinitionsPath);
+
     const agent: AgentType = {
-        id: "0987654321",
-        name: "Y-Agent",
-        description: description,
-        actions: [
-            {
-                name: "update_status",
-                type: "Execution",
-                description: "Updates the status on the Y social media platform",
-                params: {
-                    status: "example status"
-                },
-                function: async (params) => {
-                    // Simulate an API call to update status
-                    const response = await fetch('https://api.example.com/update_status', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(params)
-                    });
-                    const data = await response.json();
-                    return { status: response.status.toString() as "200" | "400" | "500", message: data.message };
-                }
-            },
-            {
-                name: "get_user_info",
-                type: "Retrieval",
-                description: "Retrieves user information from the Y social media platform",
-                params: {
-                    userId: "exampleUserId"
-                },
-                function: async (params) => {
-                    // Simulate an API call to get user information
-                    const response = await fetch(`https://api.example.com/get_user_info?userId=${params.userId}`);
-                    const data = await response.json();
-                    return { status: response.status.toString() as "200" | "400" | "500", responseBody: { "data": data } };
-                }
-            }
-        ]
+        id: agentMetadata.id,
+        name: agentMetadata.name,
+        description: agentMetadata.description,
+        actions: Object.entries(functionDefinitions.actions).map(([name, func]) => ({
+            name: name,
+            type: "Execution", // Or determine dynamically
+            description: `Description for ${name}`, // Add descriptions
+            params: {}, // Add params schema
+            handlerKey: `${name}_handler`
+        }))
     };
 
     return agent;
 }
 
 
-export { UseTerminal, FindAgentByDes };
+export { UseTerminal, FindAgentByDes, TerminalParamsSchema };

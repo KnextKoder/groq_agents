@@ -1,0 +1,13 @@
+// filepath: ./core/memory/code/agents.json
+[
+  {
+    "id": "0987654321",
+    "name": "X-Agent",
+    "description": "AI agent that interfaces with the Twitter/X api to perform certain functions"
+  },
+  {
+    "id": "1234567890",
+    "name": "Y-Agent",
+    "description": "AI agent that does something else"
+  }
+]

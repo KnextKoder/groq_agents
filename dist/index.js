@@ -14,7 +14,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GroqAgent = void 0;
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
-const utils_1 = require("./core/utils");
 const agents_1 = require("./core/agents");
 class GroqAgent {
     constructor(api_key, model) {
@@ -44,28 +43,6 @@ class GroqAgent {
         // should return {agent_name: string, agent_id: string, description: string}[]
     }
     /**
-     * Method to select an agent
-     * @param id Identification to select a specific agent to use. Call the `agents` method to see a list of available agents
-     *
-     * @returns an `Agent Type`
-     */
-    selectAgent(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const agent = yield (0, utils_1.FindAgent)(id);
-            return agent;
-        });
-    }
-    call(agent, answer) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (answer == true) {
-                const callingResult = yield (0, utils_1.AgentCallWithAnswer)(agent, this.model);
-            }
-            else {
-                const callingResult = yield (0, utils_1.AgentCall)(agent, this.model);
-            }
-        });
-    }
-    /**
      * @returns an array of tool calling models that are available to power any agent
      */
     models() {
@@ -76,15 +53,25 @@ class GroqAgent {
      * @param system Optional system message to initialize the agent
      * @param agentBody Optional, the raw code that defines an agent. Of type `AgentType`
      * @param task String that defines the task the agent is to accomplish
+     * @param timer Number that defines the max amount of time (in milliseconds) the agent should spend on a task. Default of 1 min
      * @returns an instance of the Agent class
      */
-    create(task, system, agentBody) {
-        return new agents_1.Agent(system, agentBody, this.model, task, this.api_key);
+    create(task, system, agentBody, timer) {
+        return new agents_1.Agent(system, agentBody, this.model, task, this.api_key, timer);
     }
     installDependencies(dependencies) { }
 }
 exports.GroqAgent = GroqAgent;
-const agentClient = new GroqAgent("api_key", "llama-3.3-70b-versatile");
-const agent = agentClient.create("Create a 3d model in autocad");
-const response = agent.work();
+function main() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const agentClient = new GroqAgent("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", "llama-3.3-70b-versatile");
+        // const agentOne = await agentClient.create("Write a poem for me", "You are a poet")
+        // const response = await agentOne.work()
+        const agentTwo = yield agentClient.create("Find me an AI agent for the X/twitter platform");
+        const responseTwo = yield agentTwo.work();
+        // console.log("Response:",response)
+        console.log(responseTwo);
+    });
+}
+main();
 exports.default = GroqAgent;
