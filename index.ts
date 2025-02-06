@@ -62,18 +62,5 @@ export class GroqAgent {
 
     public installDependencies(dependencies:DependencyType){}
 }
-
-async function main() {
-    const agentClient = new GroqAgent("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", "llama-3.3-70b-versatile")
-
-    // const agentOne = await agentClient.create("Write a poem for me", "You are a poet")
-    // const response = await agentOne.work()
-    const agentTwo = await agentClient.create("Find me an AI agent for the X/twitter platform")
-    const responseTwo = await agentTwo.work()
-    // console.log("Response:",response)
-    console.log(responseTwo)
-}
-
-main()
 export default GroqAgent;
 
