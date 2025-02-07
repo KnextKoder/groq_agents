@@ -2,11 +2,12 @@ import { z } from "zod";
 import { ToolUseModels, MessageType, DependencyTypeSchema } from "./types";
 import { tool, generateText, CoreTool } from "ai";
 import { createGroq } from "@ai-sdk/groq";
-import { DefaultAgentBody, DefaultSystemPrompt, Logger } from "./utils";
+import {Logger } from "./utils";
 import WebSocket from 'ws';
 import Groq from 'groq-sdk';
 import * as http from "http"
 import JSON5 from 'json5';
+import * as Master from "../core/memory/code/agentDumps/Master_Agent_000000000000"
 
 
 type ParamsSchemaType<P extends z.ZodTypeAny = z.ZodTypeAny> = {
@@ -41,29 +42,29 @@ const ExecutionActionSchema = <P extends z.ZodTypeAny>(params: P) => z.object({
     description: z.string(),
     params: params,
     handlerKey: z.string(), // Reference to the function in your registry or file
-  });
+});
   
-  const RetrievalActionSchema = <P extends z.ZodTypeAny>(params: P) => z.object({
+const RetrievalActionSchema = <P extends z.ZodTypeAny>(params: P) => z.object({
     name: z.string(),
     type: z.literal("Retrieval"),
     description: z.string(),
     params: params,
     handlerKey: z.string(),
-  });
+});
   
-  const CustomActionSchema = <P extends z.ZodTypeAny>(params: P) => z.object({
+const CustomActionSchema = <P extends z.ZodTypeAny>(params: P) => z.object({
     name: z.string(),
     type: z.literal("Custom"),
     description: z.string(),
     params: params,
     handlerKey: z.string(),
-  });
+});
 
-  const DiscriminatedActionSchema = z.discriminatedUnion("type", [
+const DiscriminatedActionSchema = z.discriminatedUnion("type", [
     ExecutionActionSchema(BaseParamsSchema),
     RetrievalActionSchema(BaseParamsSchema),
     CustomActionSchema(BaseParamsSchema),
-  ]);
+]);
 
 const AgentSchema = z.object({
   /**
@@ -114,9 +115,9 @@ class Agent {
 
     messages: MessageType[];
     
-    constructor(system: string|undefined = DefaultSystemPrompt, agentBody: AgentType|undefined, model: ToolUseModels, task: string, api_key: string, timer:number|undefined) {
-        this.system = system || DefaultSystemPrompt;
-        this.agentBody = agentBody || DefaultAgentBody;
+    constructor(system: string|undefined = Master.SystemPrompt, agentBody: AgentType|undefined, model: ToolUseModels, task: string, api_key: string, timer:number|undefined) {
+        this.system = system || Master.SystemPrompt;
+        this.agentBody = agentBody || Master.AgentBody;
         this.model = model;
         this.messages = [];
         this.task = task;
@@ -126,15 +127,15 @@ class Agent {
         if (this.system) {
             this.messages.push({ role: "system", content: this.system });
         }
-        Logger(`Agent ${this.agentBody.name} initialized with task: ${this.task}`, this.useStreamLogging);
+        Logger( "Info",`Agent ${this.agentBody.name} initialized with task: ${this.task}`, this.useStreamLogging);
     }
 
     public async work() {
-        Logger(`Starting work on task: ${this.task}`, this.useStreamLogging);
+        Logger("Action",`Starting work on task: ${this.task}`, this.useStreamLogging);
         this.messages.push({ role: "user", content: `${this.task}` });
         const result = await this.execute();
         this.messages.push({ role: "assistant", content: result || "" });
-        Logger(`Completed work on task: ${this.task}`, this.useStreamLogging);
+        Logger("Response", `Completed work on task: ${this.task}`, this.useStreamLogging);
         return result;
     }
 
@@ -142,7 +143,7 @@ class Agent {
         iscomplete: boolean,
         assesment: string
     }> {
-        Logger(`Starting watcher agent`, this.useStreamLogging)
+        Logger("Info",`Starting watcher agent`, this.useStreamLogging)
         const groq = new Groq({
             apiKey: this.api_key,
         });
@@ -171,7 +172,7 @@ class Agent {
             task: this.task
         };
 
-        Logger(`[WA] Provided Context: ${JSON.stringify(context)}`, this.useStreamLogging)
+        Logger("[WA]",`Provided Context: ${JSON.stringify(context)}`, this.useStreamLogging)
     
         const prompt = `As an AI task assessor, evaluate if the following task has been completed successfully.
         Task: ${this.task}
@@ -190,10 +191,10 @@ class Agent {
     
             const response = completion.choices[0]?.message?.content;
             console.log("Watcher Raw response: ", response);
-            Logger(`[WA] Watcher Raw Response: ${JSON.stringify(response)}`, this.useStreamLogging);
+            Logger("[WA]",`Watcher Raw Response: ${JSON.stringify(response)}`, this.useStreamLogging);
     
             if (!response) {
-                Logger(`[WA] No response from model`, this.useStreamLogging);
+                Logger("[WA]", `No response from model`, this.useStreamLogging);
                 return {
                     iscomplete: false,
                     assesment: "No response from model"
@@ -204,7 +205,7 @@ class Agent {
             try {
                 parsedResponse = JSON5.parse(response);
             } catch (parseError) {
-                Logger(`[WA] JSON5 Parse Error: ${parseError}. Raw response: ${response}`, this.useStreamLogging);
+                Logger("[WA]",`JSON5 Parse Error: ${parseError}. Raw response: ${response}`, this.useStreamLogging);
                 return {
                     iscomplete: false,
                     assesment: `JSON5 Parse Error: ${parseError}`
@@ -213,14 +214,14 @@ class Agent {
     
             // Validate response structure
             if (typeof parsedResponse.iscomplete !== 'boolean' || typeof parsedResponse.assesment !== 'string') {
-                Logger(`[WA] Invalid response format`, this.useStreamLogging);
+                Logger("[WA]", `Invalid response format`, this.useStreamLogging);
                 return {
                     iscomplete: false,
                     assesment: "Invalid response format from model"
                 };
             }
     
-            Logger(`[WA] \n Task: ${this.task} assessment complete. \n Status: ${parsedResponse.iscomplete ? 'Complete' : 'Incomplete'} \n Assessment: ${parsedResponse.assesment}`, this.useStreamLogging);
+            Logger("[WA]",`\n Task: ${this.task} assessment complete. \n Status: ${parsedResponse.iscomplete ? 'Complete' : 'Incomplete'} \n Assessment: ${parsedResponse.assesment}`, this.useStreamLogging);
     
             return {
                 iscomplete: parsedResponse.iscomplete,
@@ -229,13 +230,14 @@ class Agent {
     
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Error parsing assessment response";
-            Logger(`[WA] Error: ${errorMessage}.`, this.useStreamLogging); // Log the raw response
+            Logger("Error", `[WA] Error: ${errorMessage}.`, this.useStreamLogging); // Log the raw response
             return {
                 iscomplete: false,
                 assesment: errorMessage
             };
         }
     }
+    
     private getLogicFilePath(agent: AgentType): string {
         const sanitizedAgentName = agent.name.replace(/\s+/g, "_");
         const sanitizedID = agent.id.replace(/\s+/g, "").trim();
@@ -248,7 +250,7 @@ class Agent {
             let isTaskComplete = false;
     
             while (!isTaskComplete && Date.now() - startTime < this.TIMEOUT_MS) {
-                Logger(`Execution attempt at ${new Date().toISOString()}`, this.useStreamLogging);
+                Logger("Action",`Execution attempt at ${new Date().toISOString()}`, this.useStreamLogging);
                 const formattedMessages = this.messages.map(message => ({
                     role: message.role,
                     content: message.content,
@@ -258,7 +260,7 @@ class Agent {
                 await this.startServer();
                 const groq = createGroq({ apiKey: this.api_key });
                 
-                Logger(`Generating Output`, this.useStreamLogging);
+                Logger("Info",`Generating Output`, this.useStreamLogging);
                 console.log("Model: ", this.model);
                 console.log("Sys Msg: ", this.system);
                 console.log("Messages: ", formattedMessages);
@@ -300,13 +302,13 @@ class Agent {
                 });
     
                 this.messages.push({ role: "assistant", content: completion.text });
-                Logger(`completion messages: ${JSON.stringify(this.messages)}`, this.useStreamLogging);
+                Logger("Info",`completion messages: ${JSON.stringify(this.messages)}`, this.useStreamLogging);
     
                 const { iscomplete, assesment } = await this.watcher();
     
                 if (iscomplete) {
                     await this.stopServer();
-                    Logger(`Task completed successfully: ${completion.text}`, this.useStreamLogging);
+                    Logger("Response",`Task completed successfully: ${completion.text}`, this.useStreamLogging);
                     return completion.text;
                 }
     
@@ -318,7 +320,7 @@ class Agent {
                 });
             }
     
-            Logger(`Task timed out after ${this.TIMEOUT_MS}ms`, this.useStreamLogging);
+            Logger("Error",`Task timed out after ${this.TIMEOUT_MS}ms`, this.useStreamLogging);
             throw new Error('Task incomplete after timeout');
         } catch (error: unknown) {
             await this.stopServer();
@@ -332,7 +334,7 @@ class Agent {
                 errorMessage = String(error.message);
             }
             
-            Logger(`Task execution failed: ${errorMessage}`, this.useStreamLogging);
+            Logger("Error",`Task execution failed: ${errorMessage}`, this.useStreamLogging);
             return `Task execution failed: ${errorMessage}`;
         }
     }
@@ -342,7 +344,7 @@ class Agent {
         try{
             if (this.server) return;
 
-            Logger(`Starting server on ${this.serverConfig.host}:${this.serverConfig.port}`, this.useStreamLogging);
+            Logger("Info",`Starting server on ${this.serverConfig.host}:${this.serverConfig.port}`, this.useStreamLogging);
             this.server = http.createServer(async (req, res) => {
                 // Add CORS headers
                 res.setHeader('Access-Control-Allow-Origin', '*');
@@ -423,7 +425,7 @@ class Agent {
                     this.wss = new WebSocket.Server({ server: this.server });
 
                     this.wss.on('error', (error) => {
-                        Logger(`WebSocket error: ${error.message}`, this.useStreamLogging);
+                        Logger("Error",`WebSocket error: ${error.message}`, this.useStreamLogging);
                     });
                     
                     this.wss.on('connection', (ws) => {
@@ -448,18 +450,18 @@ class Agent {
                     const errorMessage = wsError instanceof Error 
                         ? wsError.message 
                         : 'Unknown WebSocket setup error';
-                    Logger(`WebSocket setup failed: ${errorMessage}`, this.useStreamLogging);
+                    Logger("Error",`WebSocket setup failed: ${errorMessage}`, this.useStreamLogging);
                 }
             }
 
             return new Promise((resolve, reject) => {
                 this.server!.listen(this.serverConfig.port, this.serverConfig.host, () => {
-                    Logger(`Server running at http://${this.serverConfig.host}:${this.serverConfig.port}`, this.useStreamLogging);
+                    Logger("Info",`Server running at http://${this.serverConfig.host}:${this.serverConfig.port}`, this.useStreamLogging);
                     resolve();
                 });
 
                 this.server!.on('error', (err) => {
-                    Logger(`Server error: ${err.message}`, this.useStreamLogging);
+                    Logger("Error",`Server error: ${err.message}`, this.useStreamLogging);
                     reject(err);
                 });
             });
@@ -467,13 +469,13 @@ class Agent {
             const errorMessage = error instanceof Error 
                 ? error.message 
                 : 'Unknown server error';
-            Logger(`Failed to start server: ${errorMessage}`, this.useStreamLogging);
+            Logger("Error",`Failed to start server: ${errorMessage}`, this.useStreamLogging);
             throw error;
         }
     }
     
     public async stopServer(): Promise<void> {
-        Logger(`Stopping server`, this.useStreamLogging);
+        Logger("Info",`Stopping server`, this.useStreamLogging);
         if (this.wss) {
             this.wss.close();
             this.wss = null;

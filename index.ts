@@ -3,7 +3,6 @@ import { AgentType, Agent } from './core/agents';
 import {ToolUseModels} from "./core/types"
 import {DependencyType} from "./agents/agentBody"
 
-
 export class GroqAgent {
     /**
      * specific groq hosted model to use, the model must support tool use
@@ -11,16 +10,13 @@ export class GroqAgent {
     public model: ToolUseModels
     private api_key: string;
     private GroqClient: Groq;
-
     constructor(api_key: string, model: ToolUseModels) {
         this.api_key = api_key;
         this.model = model;
         this.GroqClient = new Groq({ apiKey: this.api_key });
     }
-
     /**
      * This method lists all the available agents and their agent id. Select a specific agent by calling the `agent` method and with the agent's id as a parameter
-     * 
      * @returns an array of agents data 
      * @example `{
      *   agent_name: string, 
@@ -39,15 +35,12 @@ export class GroqAgent {
         ]);
         // should return {agent_name: string, agent_id: string, description: string}[]
     }
-
-
     /** 
      * @returns an array of tool calling models that are available to power any agent 
      */ 
     public models() {
         return ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-70b-8192", "llama3-8b-8192"] as ToolUseModels[];
     }
-
     /**
      * Method to create an Agent instance and interact with it
      * @param system Optional system message to initialize the agent
@@ -59,8 +52,16 @@ export class GroqAgent {
     public create( task:string,  system?: string, agentBody?: AgentType, timer?: number):Agent {
         return new Agent(system, agentBody, this.model, task, this.api_key, timer);
     }
-
     public installDependencies(dependencies:DependencyType){}
 }
+
+async function main(){
+    const agentClient = new GroqAgent(`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`, 'llama-3.3-70b-versatile')
+    const agent =   agentClient.create("Find an agent that can interact with the twitter/X platform")
+    const response = agent.work()
+    console.log("Agent Response:", response)
+}
+
+main()
 export default GroqAgent;
 

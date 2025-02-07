@@ -45,6 +45,7 @@ const ws_1 = __importDefault(require("ws"));
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const http = __importStar(require("http"));
 const json5_1 = __importDefault(require("json5"));
+const Master = __importStar(require("../core/memory/code/agentDumps/Master_Agent_000000000000"));
 const ParamsSchema = (schema) => ({
     parameters: schema,
 });
@@ -113,7 +114,7 @@ const AgentSchema = zod_1.z.object({
 });
 exports.AgentSchema = AgentSchema;
 class Agent {
-    constructor(system = utils_1.DefaultSystemPrompt, agentBody, model, task, api_key, timer) {
+    constructor(system = Master.SystemPrompt, agentBody, model, task, api_key, timer) {
         this.server = null;
         this.wss = null;
         this.serverConfig = {
@@ -122,8 +123,8 @@ class Agent {
             enableWebsocket: true
         };
         this.useStreamLogging = true;
-        this.system = system || utils_1.DefaultSystemPrompt;
-        this.agentBody = agentBody || utils_1.DefaultAgentBody;
+        this.system = system || Master.SystemPrompt;
+        this.agentBody = agentBody || Master.AgentBody;
         this.model = model;
         this.messages = [];
         this.task = task;
@@ -132,22 +133,22 @@ class Agent {
         if (this.system) {
             this.messages.push({ role: "system", content: this.system });
         }
-        (0, utils_1.Logger)(`Agent ${this.agentBody.name} initialized with task: ${this.task}`, this.useStreamLogging);
+        (0, utils_1.Logger)("Info", `Agent ${this.agentBody.name} initialized with task: ${this.task}`, this.useStreamLogging);
     }
     work() {
         return __awaiter(this, void 0, void 0, function* () {
-            (0, utils_1.Logger)(`Starting work on task: ${this.task}`, this.useStreamLogging);
+            (0, utils_1.Logger)("Action", `Starting work on task: ${this.task}`, this.useStreamLogging);
             this.messages.push({ role: "user", content: `${this.task}` });
             const result = yield this.execute();
             this.messages.push({ role: "assistant", content: result || "" });
-            (0, utils_1.Logger)(`Completed work on task: ${this.task}`, this.useStreamLogging);
+            (0, utils_1.Logger)("Response", `Completed work on task: ${this.task}`, this.useStreamLogging);
             return result;
         });
     }
     watcher() {
         var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
-            (0, utils_1.Logger)(`Starting watcher agent`, this.useStreamLogging);
+            (0, utils_1.Logger)("Info", `Starting watcher agent`, this.useStreamLogging);
             const groq = new groq_sdk_1.default({
                 apiKey: this.api_key,
             });
@@ -172,7 +173,7 @@ class Agent {
                 agent: this.agentBody,
                 task: this.task
             };
-            (0, utils_1.Logger)(`[WA] Provided Context: ${JSON.stringify(context)}`, this.useStreamLogging);
+            (0, utils_1.Logger)("[WA]", `Provided Context: ${JSON.stringify(context)}`, this.useStreamLogging);
             const prompt = `As an AI task assessor, evaluate if the following task has been completed successfully.
         Task: ${this.task}
         Context: ${JSON.stringify(context, null, 2)}
@@ -188,9 +189,9 @@ class Agent {
                 });
                 const response = (_b = (_a = completion.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content;
                 console.log("Watcher Raw response: ", response);
-                (0, utils_1.Logger)(`[WA] Watcher Raw Response: ${JSON.stringify(response)}`, this.useStreamLogging);
+                (0, utils_1.Logger)("[WA]", `Watcher Raw Response: ${JSON.stringify(response)}`, this.useStreamLogging);
                 if (!response) {
-                    (0, utils_1.Logger)(`[WA] No response from model`, this.useStreamLogging);
+                    (0, utils_1.Logger)("[WA]", `No response from model`, this.useStreamLogging);
                     return {
                         iscomplete: false,
                         assesment: "No response from model"
@@ -201,7 +202,7 @@ class Agent {
                     parsedResponse = json5_1.default.parse(response);
                 }
                 catch (parseError) {
-                    (0, utils_1.Logger)(`[WA] JSON5 Parse Error: ${parseError}. Raw response: ${response}`, this.useStreamLogging);
+                    (0, utils_1.Logger)("[WA]", `JSON5 Parse Error: ${parseError}. Raw response: ${response}`, this.useStreamLogging);
                     return {
                         iscomplete: false,
                         assesment: `JSON5 Parse Error: ${parseError}`
@@ -209,13 +210,13 @@ class Agent {
                 }
                 // Validate response structure
                 if (typeof parsedResponse.iscomplete !== 'boolean' || typeof parsedResponse.assesment !== 'string') {
-                    (0, utils_1.Logger)(`[WA] Invalid response format`, this.useStreamLogging);
+                    (0, utils_1.Logger)("[WA]", `Invalid response format`, this.useStreamLogging);
                     return {
                         iscomplete: false,
                         assesment: "Invalid response format from model"
                     };
                 }
-                (0, utils_1.Logger)(`[WA] \n Task: ${this.task} assessment complete. \n Status: ${parsedResponse.iscomplete ? 'Complete' : 'Incomplete'} \n Assessment: ${parsedResponse.assesment}`, this.useStreamLogging);
+                (0, utils_1.Logger)("[WA]", `\n Task: ${this.task} assessment complete. \n Status: ${parsedResponse.iscomplete ? 'Complete' : 'Incomplete'} \n Assessment: ${parsedResponse.assesment}`, this.useStreamLogging);
                 return {
                     iscomplete: parsedResponse.iscomplete,
                     assesment: parsedResponse.assesment
@@ -223,7 +224,7 @@ class Agent {
             }
             catch (error) {
                 const errorMessage = error instanceof Error ? error.message : "Error parsing assessment response";
-                (0, utils_1.Logger)(`[WA] Error: ${errorMessage}.`, this.useStreamLogging); // Log the raw response
+                (0, utils_1.Logger)("Error", `[WA] Error: ${errorMessage}.`, this.useStreamLogging); // Log the raw response
                 return {
                     iscomplete: false,
                     assesment: errorMessage
@@ -243,14 +244,14 @@ class Agent {
                 const startTime = Date.now();
                 let isTaskComplete = false;
                 while (!isTaskComplete && Date.now() - startTime < this.TIMEOUT_MS) {
-                    (0, utils_1.Logger)(`Execution attempt at ${new Date().toISOString()}`, this.useStreamLogging);
+                    (0, utils_1.Logger)("Action", `Execution attempt at ${new Date().toISOString()}`, this.useStreamLogging);
                     const formattedMessages = this.messages.map(message => ({
                         role: message.role,
                         content: message.content,
                     }));
                     yield this.startServer();
                     const groq = (0, groq_1.createGroq)({ apiKey: this.api_key });
-                    (0, utils_1.Logger)(`Generating Output`, this.useStreamLogging);
+                    (0, utils_1.Logger)("Info", `Generating Output`, this.useStreamLogging);
                     console.log("Model: ", this.model);
                     console.log("Sys Msg: ", this.system);
                     console.log("Messages: ", formattedMessages);
@@ -287,11 +288,11 @@ class Agent {
                         maxSteps: 10,
                     });
                     this.messages.push({ role: "assistant", content: completion.text });
-                    (0, utils_1.Logger)(`completion messages: ${JSON.stringify(this.messages)}`, this.useStreamLogging);
+                    (0, utils_1.Logger)("Info", `completion messages: ${JSON.stringify(this.messages)}`, this.useStreamLogging);
                     const { iscomplete, assesment } = yield this.watcher();
                     if (iscomplete) {
                         yield this.stopServer();
-                        (0, utils_1.Logger)(`Task completed successfully: ${completion.text}`, this.useStreamLogging);
+                        (0, utils_1.Logger)("Response", `Task completed successfully: ${completion.text}`, this.useStreamLogging);
                         return completion.text;
                     }
                     this.messages.push({
@@ -299,7 +300,7 @@ class Agent {
                         content: `Previous attempt assessment: ${assesment}. Please try again with remaining time: ${Math.round((this.TIMEOUT_MS - (Date.now() - startTime)) / 1000)} seconds.`
                     });
                 }
-                (0, utils_1.Logger)(`Task timed out after ${this.TIMEOUT_MS}ms`, this.useStreamLogging);
+                (0, utils_1.Logger)("Error", `Task timed out after ${this.TIMEOUT_MS}ms`, this.useStreamLogging);
                 throw new Error('Task incomplete after timeout');
             }
             catch (error) {
@@ -314,7 +315,7 @@ class Agent {
                 else if (error && typeof error === 'object' && 'message' in error) {
                     errorMessage = String(error.message);
                 }
-                (0, utils_1.Logger)(`Task execution failed: ${errorMessage}`, this.useStreamLogging);
+                (0, utils_1.Logger)("Error", `Task execution failed: ${errorMessage}`, this.useStreamLogging);
                 return `Task execution failed: ${errorMessage}`;
             }
         });
@@ -324,7 +325,7 @@ class Agent {
             try {
                 if (this.server)
                     return;
-                (0, utils_1.Logger)(`Starting server on ${this.serverConfig.host}:${this.serverConfig.port}`, this.useStreamLogging);
+                (0, utils_1.Logger)("Info", `Starting server on ${this.serverConfig.host}:${this.serverConfig.port}`, this.useStreamLogging);
                 this.server = http.createServer((req, res) => __awaiter(this, void 0, void 0, function* () {
                     // Add CORS headers
                     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -396,7 +397,7 @@ class Agent {
                     try {
                         this.wss = new ws_1.default.Server({ server: this.server });
                         this.wss.on('error', (error) => {
-                            (0, utils_1.Logger)(`WebSocket error: ${error.message}`, this.useStreamLogging);
+                            (0, utils_1.Logger)("Error", `WebSocket error: ${error.message}`, this.useStreamLogging);
                         });
                         this.wss.on('connection', (ws) => {
                             ws.send(JSON.stringify({ type: 'connected', message: 'Connected to agent server' }));
@@ -417,16 +418,16 @@ class Agent {
                         const errorMessage = wsError instanceof Error
                             ? wsError.message
                             : 'Unknown WebSocket setup error';
-                        (0, utils_1.Logger)(`WebSocket setup failed: ${errorMessage}`, this.useStreamLogging);
+                        (0, utils_1.Logger)("Error", `WebSocket setup failed: ${errorMessage}`, this.useStreamLogging);
                     }
                 }
                 return new Promise((resolve, reject) => {
                     this.server.listen(this.serverConfig.port, this.serverConfig.host, () => {
-                        (0, utils_1.Logger)(`Server running at http://${this.serverConfig.host}:${this.serverConfig.port}`, this.useStreamLogging);
+                        (0, utils_1.Logger)("Info", `Server running at http://${this.serverConfig.host}:${this.serverConfig.port}`, this.useStreamLogging);
                         resolve();
                     });
                     this.server.on('error', (err) => {
-                        (0, utils_1.Logger)(`Server error: ${err.message}`, this.useStreamLogging);
+                        (0, utils_1.Logger)("Error", `Server error: ${err.message}`, this.useStreamLogging);
                         reject(err);
                     });
                 });
@@ -435,14 +436,14 @@ class Agent {
                 const errorMessage = error instanceof Error
                     ? error.message
                     : 'Unknown server error';
-                (0, utils_1.Logger)(`Failed to start server: ${errorMessage}`, this.useStreamLogging);
+                (0, utils_1.Logger)("Error", `Failed to start server: ${errorMessage}`, this.useStreamLogging);
                 throw error;
             }
         });
     }
     stopServer() {
         return __awaiter(this, void 0, void 0, function* () {
-            (0, utils_1.Logger)(`Stopping server`, this.useStreamLogging);
+            (0, utils_1.Logger)("Info", `Stopping server`, this.useStreamLogging);
             if (this.wss) {
                 this.wss.close();
                 this.wss = null;
