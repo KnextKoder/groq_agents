@@ -63,7 +63,7 @@ class GroqAgent {
 exports.GroqAgent = GroqAgent;
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        const agentClient = new GroqAgent(`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`, 'llama-3.3-70b-versatile');
+        const agentClient = new GroqAgent(`api_key`, 'llama-3.3-70b-versatile');
         const agent = agentClient.create("Find an agent that can interact with the twitter/X platform");
         const response = agent.work();
         console.log("Agent Response:", response);
